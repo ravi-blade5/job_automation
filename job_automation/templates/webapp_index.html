@@ -1,0 +1,447 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Automation Control Room</title>
+  <style>
+    :root{--bg:#f3efe7;--panel:rgba(255,255,255,.88);--panel-strong:#fff;--ink:#152233;--muted:#617084;--line:rgba(21,34,51,.12);--line-strong:rgba(21,34,51,.2);--teal:#0f766e;--teal-strong:#115e59;--navy:#17324d;--amber:#b45309;--coral:#b42318;--shadow:0 24px 54px rgba(21,34,51,.12);--radius-xl:28px;--radius-lg:22px;--radius-md:16px}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;color:var(--ink);background:radial-gradient(circle at top left,rgba(15,118,110,.16),transparent 30%),radial-gradient(circle at top right,rgba(23,50,77,.12),transparent 28%),linear-gradient(180deg,#fbf8f2 0%,var(--bg) 100%);font-family:Aptos,"Segoe UI Variable","Trebuchet MS",sans-serif}
+    .shell{width:min(1440px,calc(100vw - 40px));margin:28px auto 48px}.hero{display:grid;grid-template-columns:1.35fr .95fr;gap:20px;align-items:stretch}.hero-card,.panel,.small-panel{background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+    .hero-card{padding:30px;border-radius:var(--radius-xl);position:relative;overflow:hidden}.hero-card::after{content:"";position:absolute;inset:auto -12% -60% 42%;height:230px;background:linear-gradient(135deg,rgba(15,118,110,.22),rgba(23,50,77,.1));border-radius:999px;filter:blur(12px);pointer-events:none}.control-panel{padding:24px;border-radius:var(--radius-xl);display:flex;flex-direction:column;gap:18px;justify-content:space-between}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(21,34,51,.06);color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}h1{margin:14px 0 10px;font-size:clamp(34px,4vw,56px);line-height:.95;letter-spacing:-.05em}h2{margin:0 0 8px;font-size:26px;letter-spacing:-.04em}h3{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}p{margin:0}
+    .hero-copy{max-width:76ch;color:var(--muted);line-height:1.62;font-size:15px;position:relative;z-index:1}.hero-pills{position:relative;z-index:1;margin-top:22px;display:flex;flex-wrap:wrap;gap:10px}.pill,.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:rgba(21,34,51,.06);color:var(--ink);font-size:12px;line-height:1.2}.chip.good{background:rgba(15,118,110,.14);color:var(--teal-strong)}.chip.warn{background:rgba(180,83,9,.14);color:var(--amber)}.chip.bad{background:rgba(180,35,24,.14);color:var(--coral)}
+    .control-grid{display:grid;gap:14px}label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}input,select,button{border:1px solid var(--line);border-radius:14px;font:inherit}input,select{width:100%;padding:12px 14px;background:var(--panel-strong);color:var(--ink)}button{cursor:pointer;padding:11px 16px;background:var(--panel-strong);color:var(--ink);transition:transform 140ms ease,box-shadow 140ms ease,border-color 140ms ease,background 140ms ease}button:hover{transform:translateY(-1px);box-shadow:0 14px 24px rgba(21,34,51,.1);border-color:var(--line-strong)}button.primary{background:linear-gradient(135deg,var(--teal),var(--teal-strong));color:#fff;border-color:transparent}button.secondary{background:linear-gradient(135deg,var(--navy),#275172);color:#fff;border-color:transparent}button.danger{background:linear-gradient(135deg,#c2410c,#9a3412);color:#fff;border-color:transparent}button.ghost{background:rgba(255,255,255,.7)}button.small{padding:8px 12px;font-size:13px;border-radius:12px}.button-row{display:flex;flex-wrap:wrap;gap:10px}
+    .workflow-note{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.72);color:var(--muted);font-size:14px;line-height:1.55}.banner{margin:18px 0 0;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.72);min-height:52px;display:flex;align-items:center;color:var(--ink)}.banner.info{border-left:4px solid var(--navy)}.banner.success{border-left:4px solid var(--teal)}.banner.warn{border-left:4px solid var(--amber)}.banner.error{border-left:4px solid var(--coral)}
+    .tab-bar{margin-top:18px;padding:10px;display:flex;flex-wrap:wrap;gap:10px;border-radius:22px;background:rgba(255,255,255,.7);border:1px solid var(--line);box-shadow:var(--shadow)}.tab-button{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:600}.tab-button.active{background:rgba(21,34,51,.08);border-color:rgba(21,34,51,.1);color:var(--ink);box-shadow:none;transform:none}.tab-badge{min-width:24px;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:12px}.tab-panel{display:none;margin-top:20px}.tab-panel.active{display:block}
+    .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.metric-card{padding:18px;border-radius:var(--radius-lg);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}.metric-card .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}.metric-card .value{font-size:30px;line-height:1;font-weight:700;letter-spacing:-.04em;margin-bottom:8px}.metric-card .sub{color:var(--muted);font-size:13px;line-height:1.45}
+    .layout{display:grid;gap:18px}.layout.two-up{grid-template-columns:1.18fr .82fr}.stack{display:grid;gap:18px}.panel{padding:24px;border-radius:var(--radius-xl)}.small-panel{padding:18px;border-radius:var(--radius-lg)}.subhead{color:var(--muted);font-size:14px;line-height:1.55}.section-head{display:flex;flex-wrap:wrap;gap:16px;align-items:end;justify-content:space-between;margin-bottom:18px}.control-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;width:min(100%,720px)}.results-bar{margin-bottom:16px;padding:12px 14px;border-radius:14px;background:rgba(21,34,51,.05);color:var(--muted);font-size:14px}
+    .workflow-grid{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.workflow-card{padding:16px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.86)}.workflow-step{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:999px;background:rgba(15,118,110,.12);color:var(--teal-strong);font-weight:700;margin-bottom:12px}.workflow-card p{color:var(--muted);font-size:14px;line-height:1.55}
+    .list,.queue-grid,.activity-feed,.checklist{display:grid;gap:12px}.list-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(21,34,51,.05);font-size:14px}.list-item strong{display:block;margin-bottom:4px}.queue-card{padding:18px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.88)}.queue-card h3{margin:0 0 6px;font-size:20px}.queue-card .company{color:var(--muted);font-size:14px;margin-bottom:10px}.queue-card .meta{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:10px}.queue-card .description{margin:0 0 14px;color:var(--ink);line-height:1.55;font-size:14px}
+    .chip-row,.doc-links,.action-stack,.inline-controls{display:flex;flex-wrap:wrap;gap:8px}.action-stack{margin-top:12px}.inline-controls{margin-top:8px}.doc-links{margin-top:10px}.doc-link,.text-link,a{color:#0f4c81;text-decoration:none;font-weight:600}.doc-link:hover,.text-link:hover,a:hover{text-decoration:underline}.muted-inline{color:var(--muted);font-size:13px}
+    table{width:100%;border-collapse:collapse;font-size:14px;min-width:880px}.table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--line)}th,td{padding:12px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);background:rgba(255,255,255,.78)}th{position:sticky;top:0;z-index:1;background:#f9f7f2;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.cell-title{font-weight:700;margin-bottom:4px}.cell-sub{color:var(--muted);font-size:13px;line-height:1.45}.cell-actions{display:grid;gap:8px;min-width:220px}.inline-select{min-width:140px;padding:9px 12px;font-size:13px}
+    .activity-item{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.86)}.activity-item .topline{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}.activity-item .details{color:var(--muted);font-size:14px;line-height:1.55}.check-item{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;padding:14px;border-radius:14px;background:rgba(21,34,51,.05);font-size:14px;line-height:1.55}.check-number{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:rgba(21,34,51,.1);font-weight:700}.empty{padding:26px;border:1px dashed var(--line);border-radius:18px;color:var(--muted);text-align:center;background:rgba(255,255,255,.58)}
+    @media (max-width:1180px){.hero,.layout.two-up{grid-template-columns:1fr}} @media (max-width:760px){.shell{width:min(100vw - 20px,1440px);margin:16px auto 28px}.hero-card,.control-panel,.panel,.small-panel{padding:18px}.button-row{flex-direction:column}button{width:100%}.control-strip{width:100%}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <article class="hero-card">
+        <div class="eyebrow">Apify + Firecrawl + scoring + tracker</div>
+        <h1>Job Automation Control Room</h1>
+        <p class="hero-copy">This browser layer stays on top of the working Python pipeline. Use it to run sourcing, inspect the real review queue, generate artifacts, serve those files in the browser, and keep applications moving without bouncing between Sheets, JSON files, and terminal commands.</p>
+        <div class="hero-pills">
+          <span class="pill" id="heroTrackerPill">Tracker: -</span>
+          <span class="pill" id="heroJobsPill">Jobs tracked: -</span>
+          <span class="pill" id="heroQueuePill">Review queue: -</span>
+        </div>
+      </article>
+      <aside class="hero-card control-panel">
+        <div class="control-grid">
+          <div>
+            <label for="tracker">Tracker Backend</label>
+            <select id="tracker">
+              <option value="google_sheets">Google Sheets</option>
+              <option value="json">Local JSON</option>
+              <option value="airtable">Airtable</option>
+            </select>
+          </div>
+          <div class="button-row">
+            <button class="primary" id="runDailyButton" type="button">Run Daily</button>
+            <button class="ghost" id="refreshButton" type="button">Refresh</button>
+            <button class="secondary" id="dashboardButton" type="button">Dashboard Only</button>
+          </div>
+        </div>
+        <div class="workflow-note">Recommended operating loop: run ingestion, review the queue, approve strong matches, generate artifacts, submit manually on the portal, then update application status and follow-up dates from this screen.</div>
+      </aside>
+    </section>
+
+    <div id="banner" class="banner info">Ready. Load the current tracker state to begin.</div>
+
+    <nav class="tab-bar" aria-label="Sections">
+      <button class="tab-button active" type="button" data-tab="overview">Overview</button>
+      <button class="tab-button" type="button" data-tab="queue">Review Queue <span class="tab-badge" id="queueBadge">0</span></button>
+      <button class="tab-button" type="button" data-tab="applications">Applications <span class="tab-badge" id="applicationBadge">0</span></button>
+      <button class="tab-button" type="button" data-tab="jobs">Jobs <span class="tab-badge" id="jobsBadge">0</span></button>
+      <button class="tab-button" type="button" data-tab="activity">Activity <span class="tab-badge" id="activityBadge">0</span></button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-overview">
+      <section id="metrics" class="metric-grid"></section>
+      <section class="layout two-up" style="margin-top:20px;">
+        <section class="panel">
+          <h2>Today Workflow</h2>
+          <p class="subhead">This is the practical flow we borrowed from the scratch prototype and wired into the real job pipeline so it is not just a mock dashboard.</p>
+          <div class="workflow-grid">
+            <article class="workflow-card"><div class="workflow-step">1</div><h3>Run Ingestion</h3><p>Pull fresh roles from Apify and any active source adapters. Use this first whenever you want a new batch.</p></article>
+            <article class="workflow-card"><div class="workflow-step">2</div><h3>Review Queue</h3><p>Search and filter hold/new items, then approve only the roles worth real effort.</p></article>
+            <article class="workflow-card"><div class="workflow-step">3</div><h3>Generate Artifacts</h3><p>Create the resume summary, cover note, referral text, and open them directly in the browser.</p></article>
+            <article class="workflow-card"><div class="workflow-step">4</div><h3>Submit Manually</h3><p>Use the stored portal link, verify the JD one last time, and submit yourself to stay compliant.</p></article>
+            <article class="workflow-card"><div class="workflow-step">5</div><h3>Track Outcomes</h3><p>Move status forward, mark follow-ups done, and keep the conversion funnel current from one place.</p></article>
+          </div>
+        </section>
+        <aside class="stack">
+          <section class="small-panel"><h3>Source Conversion</h3><div id="sourceConversion" class="list"></div></section>
+          <section class="small-panel"><h3>Follow-ups Due</h3><div id="followupsDue" class="list"></div></section>
+          <section class="small-panel"><h3>Tracker Health</h3><div id="trackerHealth" class="list"></div></section>
+        </aside>
+      </section>
+    </section>
+    <section class="tab-panel" id="tab-queue">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Review Queue</h2>
+            <p class="subhead">These are the jobs waiting on your decision. Approve first, then generate artifacts or record manual applications.</p>
+          </div>
+          <div class="control-strip">
+            <input id="queueSearch" type="search" placeholder="Search role, company, source, location">
+            <select id="queueDecision">
+              <option value="all">All decisions</option>
+              <option value="must_apply">Must apply</option>
+              <option value="good_fit">Good fit</option>
+              <option value="low_fit">Low fit</option>
+            </select>
+          </div>
+        </div>
+        <div id="queueSummary" class="results-bar">No queue items loaded yet.</div>
+        <div id="reviewQueue" class="queue-grid"></div>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="tab-applications">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Applications</h2>
+            <p class="subhead">Search and move applications through screening, applied, interview, offer, rejected, and closed states without dropping into the CLI.</p>
+          </div>
+          <div class="control-strip">
+            <input id="applicationSearch" type="search" placeholder="Search company, role, source, application id">
+            <select id="applicationStatus">
+              <option value="all">All statuses</option>
+              <option value="new">New</option>
+              <option value="screening">Screening</option>
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+              <option value="closed">Closed</option>
+            </select>
+            <select id="applicationOwner">
+              <option value="all">All owner actions</option>
+              <option value="hold">Hold</option>
+              <option value="approve">Approve</option>
+              <option value="reject">Reject</option>
+            </select>
+            <select id="applicationSort">
+              <option value="updated_desc">Newest activity first</option>
+              <option value="fit_desc">Highest fit first</option>
+              <option value="company_asc">Company A-Z</option>
+            </select>
+          </div>
+        </div>
+        <div id="applicationsSummary" class="results-bar">No applications loaded yet.</div>
+        <div id="applicationsTable"></div>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="tab-jobs">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Jobs</h2>
+            <p class="subhead">Use this as your source coverage check. It helps confirm what actually came in from Apify or other sources and whether links are valid.</p>
+          </div>
+          <div class="control-strip">
+            <input id="jobSearch" type="search" placeholder="Search title, company, location, source">
+            <select id="jobSource"><option value="all">All sources</option></select>
+            <select id="jobRemote"><option value="all">All remote types</option></select>
+            <select id="jobSort">
+              <option value="captured_desc">Newest captured first</option>
+              <option value="company_asc">Company A-Z</option>
+              <option value="title_asc">Title A-Z</option>
+            </select>
+          </div>
+        </div>
+        <div id="jobsSummary" class="results-bar">No jobs loaded yet.</div>
+        <div id="jobsTable"></div>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="tab-activity">
+      <div class="layout two-up">
+        <section class="panel">
+          <h2>Recent Activity</h2>
+          <p class="subhead">Pipeline runs, approval decisions, artifact creation, and status changes land here so you can see what changed without opening tracker files directly.</p>
+          <div id="activityFeed" class="activity-feed"></div>
+        </section>
+        <aside class="stack">
+          <section class="small-panel">
+            <h3>Manual Submit Checklist</h3>
+            <div class="checklist">
+              <div class="check-item"><span class="check-number">1</span><div>Open the job link and confirm the title, location, and portal are still current before submitting.</div></div>
+              <div class="check-item"><span class="check-number">2</span><div>Approve the role first, then generate the resume summary, cover note, and referral message from the application record.</div></div>
+              <div class="check-item"><span class="check-number">3</span><div>Submit on the portal yourself, then use <strong>Mark applied</strong> so follow-ups are scheduled automatically.</div></div>
+              <div class="check-item"><span class="check-number">4</span><div>When recruiter responses arrive, move the status forward here so the dashboard and tracker stay honest.</div></div>
+            </div>
+          </section>
+          <section class="small-panel">
+            <h3>What We Leveraged</h3>
+            <div class="list">
+              <div class="list-item"><strong>Scratch prototype</strong><span>Tabbed UX, searchable lists, workflow cues</span></div>
+              <div class="list-item"><strong>Current Python system</strong><span>Real pipeline, trackers, artifact generation, tests</span></div>
+              <div class="list-item"><strong>Today focus</strong><span>One browser app on one backend instead of two half-finished stacks</span></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const defaultTracker = "__DEFAULT_TRACKER__";
+    const applicationStatuses = ["screening","applied","interview","offer","rejected","closed"];
+    const state = {
+      data: {tracker: defaultTracker, summary: {}, dashboard: {}, source_conversion: {}, review_queue: [], jobs: [], applications: [], followups_due: [], activity: []},
+      index: {jobsById: {}, applicationsByJobId: {}},
+      ui: {tab: "overview", queueSearch: "", queueDecision: "all", applicationSearch: "", applicationStatus: "all", applicationOwner: "all", applicationSort: "updated_desc", jobSearch: "", jobSource: "all", jobRemote: "all", jobSort: "captured_desc"}
+    };
+
+    function tracker(){ return document.getElementById("tracker").value; }
+    function safe(value){ return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;"); }
+    function short(value,maxLength=180){ const text=String(value ?? "").trim(); if(!text){ return ""; } return text.length <= maxLength ? text : `${text.slice(0,maxLength - 1)}...`; }
+    function numeric(value){ const parsed=Number(value); return Number.isFinite(parsed) ? parsed : 0; }
+    function formatDate(value){ const text=String(value ?? "").trim(); if(!text){ return "-"; } return text.replace("T"," ").replace("Z",""); }
+    function titleCase(value){ return String(value ?? "").split(/[_\s-]+/).filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
+    function toneForDecision(decision){ if(decision === "must_apply"){ return "good"; } if(decision === "good_fit"){ return "warn"; } if(decision === "low_fit"){ return "bad"; } return ""; }
+    function setBanner(message,tone="info"){ const banner=document.getElementById("banner"); banner.className=`banner ${tone}`; banner.textContent=message; }
+
+    async function api(path,options={}){
+      const response = await fetch(path,{headers:{"Content-Type":"application/json"},...options});
+      let payload;
+      try{ payload = await response.json(); }catch(_error){ throw new Error(`Invalid response from ${path}`); }
+      if(!response.ok || payload.ok === false){ throw new Error(payload.error || `Request failed with status ${response.status}`); }
+      return payload.data;
+    }
+
+    function rebuildIndexes(){
+      state.index.jobsById = {};
+      state.index.applicationsByJobId = {};
+      for(const job of state.data.jobs || []){ state.index.jobsById[job.job_id] = job; }
+      for(const application of state.data.applications || []){ state.index.applicationsByJobId[application.job_id] = application; }
+    }
+
+    function activateTab(tabName){
+      state.ui.tab = tabName;
+      document.querySelectorAll(".tab-button").forEach(button => { button.classList.toggle("active", button.dataset.tab === tabName); });
+      document.querySelectorAll(".tab-panel").forEach(panel => { panel.classList.toggle("active", panel.id === `tab-${tabName}`); });
+    }
+
+    async function loadOverview(){
+      try{
+        setBanner("Loading tracker state...","info");
+        const data = await api(`/api/overview?tracker=${encodeURIComponent(tracker())}`);
+        state.data = data;
+        rebuildIndexes();
+        renderAll();
+        setBanner(`Loaded ${data.summary.jobs_total} jobs and ${data.summary.review_queue_total} review items from ${data.tracker}.`,`success`);
+      }catch(error){ setBanner(error.message,"error"); }
+    }
+
+    async function loadDashboardOnly(){
+      try{
+        setBanner("Refreshing dashboard metrics...","info");
+        const data = await api(`/api/dashboard?tracker=${encodeURIComponent(tracker())}`);
+        state.data = {...state.data, tracker: data.tracker, summary: data.summary, dashboard: data.dashboard, source_conversion: data.source_conversion, followups_due: data.followups_due};
+        rebuildIndexes();
+        renderOverviewOnly();
+        activateTab("overview");
+        setBanner(`Dashboard refreshed for ${data.tracker}.`,`success`);
+      }catch(error){ setBanner(error.message,"error"); }
+    }
+
+    async function runDaily(){
+      try{
+        setBanner("Running ingestion, scoring, and queue build...","info");
+        const data = await api(`/api/run-daily?tracker=${encodeURIComponent(tracker())}`,{method:"POST",body: JSON.stringify({})});
+        await loadOverview();
+        setBanner(`Run complete: ingested ${data.result.ingested}, accepted ${data.result.deduped}, scored ${data.result.scored}, queued ${data.result.queued}.`,`success`);
+      }catch(error){ setBanner(error.message,"error"); }
+    }
+    async function approveApplication(applicationId){ await runAction(`/api/applications/${applicationId}/approve?tracker=${encodeURIComponent(tracker())}`,"Approving application..."); }
+    async function rejectApplication(applicationId){ if(!window.confirm("Reject this application from the workflow?")){ return; } await runAction(`/api/applications/${applicationId}/reject?tracker=${encodeURIComponent(tracker())}`,"Rejecting application..."); }
+    async function generateArtifacts(applicationId){ await runAction(`/api/applications/${applicationId}/generate-artifacts?tracker=${encodeURIComponent(tracker())}`,"Generating resume summary, cover note, and referral message..."); }
+    async function markApplied(applicationId){ const appliedOn=window.prompt("Applied on date (YYYY-MM-DD). Leave blank for today.",""); await runAction(`/api/applications/${applicationId}/mark-applied?tracker=${encodeURIComponent(tracker())}`,"Marking application as submitted...",{applied_on: appliedOn || ""}); }
+    async function advanceApplicationStatus(applicationId){ const select=document.querySelector(`[data-status-select="${applicationId}"]`); const nextStatus=select ? select.value : ""; if(!nextStatus){ setBanner("Choose a target status first.","warn"); return; } await runAction(`/api/applications/${applicationId}/advance-status?tracker=${encodeURIComponent(tracker())}`,`Moving application to ${titleCase(nextStatus)}...`,{status: nextStatus}); }
+    async function markFollowupDone(applicationId){ await runAction(`/api/applications/${applicationId}/mark-followup-done?tracker=${encodeURIComponent(tracker())}`,"Marking the current follow-up as completed..."); }
+
+    async function runAction(path,bannerText,payload={}){
+      try{
+        setBanner(bannerText,"info");
+        await api(path,{method:"POST",body: JSON.stringify(payload)});
+        await loadOverview();
+        setBanner("Action completed successfully.","success");
+      }catch(error){ setBanner(error.message,"error"); }
+    }
+
+    function renderAll(){ renderOverviewOnly(); renderQueueTab(); renderApplicationsTab(); renderJobsTab(); renderActivityTab(); updateTabBadges(); renderHeroPills(); }
+    function renderOverviewOnly(){ renderMetrics(); renderSourceConversion(); renderFollowups(); renderTrackerHealth(); updateTabBadges(); renderHeroPills(); }
+    function updateTabBadges(){ document.getElementById("queueBadge").textContent=String((state.data.review_queue || []).length); document.getElementById("applicationBadge").textContent=String((state.data.applications || []).length); document.getElementById("jobsBadge").textContent=String((state.data.jobs || []).length); document.getElementById("activityBadge").textContent=String((state.data.activity || []).length); }
+    function renderHeroPills(){ const summary=state.data.summary || {}; document.getElementById("heroTrackerPill").textContent=`Tracker: ${state.data.tracker || tracker()}`; document.getElementById("heroJobsPill").textContent=`Jobs tracked: ${summary.jobs_total ?? 0}`; document.getElementById("heroQueuePill").textContent=`Review queue: ${summary.review_queue_total ?? 0}`; }
+
+    function renderMetrics(){
+      const summary=state.data.summary || {}; const dashboard=state.data.dashboard || {}; const statusCounts=summary.status_counts || {};
+      const metrics=[
+        {label:"Jobs tracked",value:summary.jobs_total ?? 0,sub:"All jobs currently stored in the selected tracker."},
+        {label:"Applications",value:summary.applications_total ?? 0,sub:"Current application records across all stages."},
+        {label:"Review queue",value:summary.review_queue_total ?? 0,sub:"Roles still waiting for an explicit yes or no."},
+        {label:"Screening",value:statusCounts.screening ?? 0,sub:"Approved items currently under recruiter or internal screening."},
+        {label:"Applied",value:statusCounts.applied ?? 0,sub:"Manual submissions already recorded."},
+        {label:"Interview rate",value:`${dashboard.interview_rate_pct ?? 0}%`,sub:"Conversion from application records into interview-stage outcomes."},
+        {label:"Offers",value:statusCounts.offer ?? 0,sub:"Offer-stage records currently in the tracker."},
+        {label:"Follow-ups due",value:summary.followups_due_total ?? 0,sub:"Applications that need action based on the stored follow-up schedule."}
+      ];
+      document.getElementById("metrics").innerHTML=metrics.map(metric => `<article class="metric-card"><div class="label">${safe(metric.label)}</div><div class="value">${safe(metric.value)}</div><div class="sub">${safe(metric.sub)}</div></article>`).join("");
+    }
+
+    function filteredQueue(){
+      const search=state.ui.queueSearch.trim().toLowerCase(); const decision=state.ui.queueDecision;
+      return (state.data.review_queue || []).filter(entry => {
+        const application=entry.application || {}; const job=entry.job || {}; const fit=entry.fit_score || {}; const candidateDecision=fit.decision || application.decision || "";
+        if(decision !== "all" && candidateDecision !== decision){ return false; }
+        if(!search){ return true; }
+        const haystack=[job.title_raw,job.company,job.location,job.source,job.description_text,application.application_id].join(" ").toLowerCase();
+        return haystack.includes(search);
+      }).sort((left,right) => numeric((right.fit_score || {}).fit_score || (right.application || {}).fit_score) - numeric((left.fit_score || {}).fit_score || (left.application || {}).fit_score));
+    }
+
+    function renderQueueTab(){
+      const items=filteredQueue(); document.getElementById("queueSummary").textContent=`Showing ${items.length} of ${(state.data.review_queue || []).length} queued items.`;
+      const container=document.getElementById("reviewQueue");
+      if(items.length === 0){ container.innerHTML='<div class="empty">No review items match the current filters.</div>'; return; }
+      container.innerHTML=items.map(entry => {
+        const application=entry.application || {}; const job=entry.job || {}; const fit=entry.fit_score || {}; const decision=fit.decision || application.decision || "unknown"; const reasonCodes=Array.isArray(fit.reason_codes) ? fit.reason_codes : []; const docLinks=renderDocumentLinks(application);
+        const jobUrl=job.job_url ? `<a class="text-link" href="${safe(job.job_url)}" target="_blank" rel="noopener noreferrer">Open job link</a>` : '<span class="muted-inline">No job URL stored</span>';
+        return `<article class="queue-card"><h3>${safe(job.title_raw || "Untitled role")}</h3><div class="company">${safe(job.company || "Unknown company")} | ${safe(job.location || "Unknown location")}</div><div class="chip-row"><span class="chip ${toneForDecision(decision)}">${safe(titleCase(decision))}</span><span class="chip">Fit ${safe(fit.fit_score ?? application.fit_score ?? "-")}</span><span class="chip">Track ${safe(titleCase(application.role_track || "-"))}</span><span class="chip">Resume ${safe(application.resume_variant || "-")}</span><span class="chip">Source ${safe(job.source || "-")}</span><span class="chip">Remote ${safe(job.remote_type || "-")}</span></div><div class="meta">Must-have match: ${safe(fit.must_have_match_pct ?? "-")}% | Domain match: ${safe(fit.domain_match_pct ?? "-")}% | Seniority: ${safe(titleCase(fit.seniority_match || "-"))}</div><p class="description">${safe(short(job.description_text || "",280) || "No description captured.")}</p>${reasonCodes.length ? `<div class="chip-row">${reasonCodes.map(code => `<span class="chip">${safe(code)}</span>`).join("")}</div>` : ""}<div class="action-stack"><button class="primary small" type="button" onclick="approveApplication('${safe(application.application_id)}')">Approve</button><button class="danger small" type="button" onclick="rejectApplication('${safe(application.application_id)}')">Reject</button><button class="ghost small" type="button" onclick="generateArtifacts('${safe(application.application_id)}')">Generate artifacts</button><button class="ghost small" type="button" onclick="markApplied('${safe(application.application_id)}')">Mark applied</button>${jobUrl}</div><div class="doc-links">${docLinks}</div></article>`;
+      }).join("");
+    }
+
+    function filteredApplicationViews(){
+      const search=state.ui.applicationSearch.trim().toLowerCase(); const status=state.ui.applicationStatus; const owner=state.ui.applicationOwner; const sort=state.ui.applicationSort;
+      const items=(state.data.applications || []).map(application => ({application,job: state.index.jobsById[application.job_id] || {}})).filter(entry => {
+        const application=entry.application; const job=entry.job || {};
+        if(status !== "all" && application.status !== status){ return false; }
+        if(owner !== "all" && application.owner_action !== owner){ return false; }
+        if(!search){ return true; }
+        const haystack=[application.application_id,application.status,application.owner_action,application.role_track,job.company,job.title_raw,job.location,job.source].join(" ").toLowerCase();
+        return haystack.includes(search);
+      });
+      items.sort((left,right) => { if(sort === "fit_desc"){ return numeric(right.application.fit_score) - numeric(left.application.fit_score); } if(sort === "company_asc"){ return String(left.job.company || "").localeCompare(String(right.job.company || "")); } return String(right.application.updated_at || "").localeCompare(String(left.application.updated_at || "")); });
+      return items;
+    }
+
+    function renderApplicationsTab(){
+      const items=filteredApplicationViews(); document.getElementById("applicationsSummary").textContent=`Showing ${items.length} of ${(state.data.applications || []).length} applications.`;
+      const container=document.getElementById("applicationsTable");
+      if(items.length === 0){ container.innerHTML='<div class="empty">No applications match the current filters.</div>'; return; }
+      const rows=items.map(entry => {
+        const application=entry.application; const job=entry.job || {}; const docLinks=renderDocumentLinks(application); const statusOptions=statusSelectOptions(application.status); const openLink=job.job_url ? `<a class="text-link" href="${safe(job.job_url)}" target="_blank" rel="noopener noreferrer">Job link</a>` : '<span class="muted-inline">No link</span>';
+        return `<tr><td><div class="cell-title">${safe(job.company || "Unknown company")}</div><div class="cell-sub">${safe(job.source || "-")} | ${safe(job.location || "-")}</div></td><td><div class="cell-title">${safe(job.title_raw || "Untitled role")}</div><div class="cell-sub">${safe(application.application_id)}</div></td><td><span class="chip ${toneForDecision(application.decision)}">${safe(titleCase(application.status || "-"))}</span><div class="cell-sub" style="margin-top:8px;">Owner: ${safe(titleCase(application.owner_action || "-"))}</div></td><td><div class="cell-title">${safe(application.fit_score)}</div><div class="cell-sub">${safe(titleCase(application.role_track || "-"))} | Resume ${safe(application.resume_variant || "-")}</div></td><td><div class="cell-sub">Applied: ${safe(application.applied_on || "-")}</div><div class="cell-sub">Next follow-up: ${safe(application.next_followup_on || "-")}</div><div class="cell-sub">Updated: ${safe(formatDate(application.updated_at || ""))}</div></td><td>${docLinks}</td><td><div class="cell-actions"><div class="action-stack">${renderPrimaryApplicationActions(application)}${openLink}</div><div class="inline-controls"><select class="inline-select" data-status-select="${safe(application.application_id)}">${statusOptions}</select><button class="small ghost" type="button" onclick="advanceApplicationStatus('${safe(application.application_id)}')">Move</button>${application.next_followup_on ? `<button class="small ghost" type="button" onclick="markFollowupDone('${safe(application.application_id)}')">Follow-up done</button>` : ""}</div></div></td></tr>`;
+      }).join("");
+      container.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Company</th><th>Role</th><th>Status</th><th>Fit</th><th>Timing</th><th>Documents</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+    function renderPrimaryApplicationActions(application){
+      const actions=[]; const applicationId=safe(application.application_id);
+      if(application.owner_action === "hold" && application.status === "new"){ actions.push(`<button class="primary small" type="button" onclick="approveApplication('${applicationId}')">Approve</button>`); actions.push(`<button class="danger small" type="button" onclick="rejectApplication('${applicationId}')">Reject</button>`); }
+      if(application.owner_action === "approve"){ actions.push(`<button class="ghost small" type="button" onclick="generateArtifacts('${applicationId}')">Artifacts</button>`); if(!application.applied_on){ actions.push(`<button class="ghost small" type="button" onclick="markApplied('${applicationId}')">Mark applied</button>`); } }
+      return actions.length ? actions.join("") : '<span class="muted-inline">No direct action</span>';
+    }
+
+    function statusSelectOptions(currentStatus){ const options=['<option value="">Move to...</option>']; for(const status of applicationStatuses){ if(status === currentStatus){ continue; } options.push(`<option value="${safe(status)}">${safe(titleCase(status))}</option>`); } return options.join(""); }
+
+    function filteredJobs(){
+      const search=state.ui.jobSearch.trim().toLowerCase(); const source=state.ui.jobSource; const remote=state.ui.jobRemote; const sort=state.ui.jobSort;
+      const items=(state.data.jobs || []).filter(job => { if(source !== "all" && job.source !== source){ return false; } if(remote !== "all" && job.remote_type !== remote){ return false; } if(!search){ return true; } const haystack=[job.title_raw,job.company,job.location,job.remote_type,job.source,job.description_text].join(" ").toLowerCase(); return haystack.includes(search); });
+      items.sort((left,right) => { if(sort === "company_asc"){ return String(left.company || "").localeCompare(String(right.company || "")); } if(sort === "title_asc"){ return String(left.title_raw || "").localeCompare(String(right.title_raw || "")); } const rightStamp=right.scraped_at || right.date_posted || ""; const leftStamp=left.scraped_at || left.date_posted || ""; return String(rightStamp).localeCompare(String(leftStamp)); });
+      return items;
+    }
+
+    function renderJobsTab(){
+      populateJobFilters();
+      const items=filteredJobs(); document.getElementById("jobsSummary").textContent=`Showing ${items.length} of ${(state.data.jobs || []).length} jobs.`;
+      const container=document.getElementById("jobsTable");
+      if(items.length === 0){ container.innerHTML='<div class="empty">No jobs match the current filters.</div>'; return; }
+      const rows=items.map(job => { const application=state.index.applicationsByJobId[job.job_id] || null; return `<tr><td><div class="cell-title">${safe(job.title_raw || "-")}</div><div class="cell-sub">${safe(short(job.description_text || "",90) || "No description stored.")}</div></td><td><div class="cell-title">${safe(job.company || "-")}</div><div class="cell-sub">${safe(job.location || "-")}</div></td><td><div class="cell-title">${safe(job.source || "-")}</div><div class="cell-sub">Remote type: ${safe(job.remote_type || "-")}</div></td><td>${application ? `<span class="chip ${toneForDecision(application.decision)}">${safe(titleCase(application.status || "-"))}</span>` : '<span class="muted-inline">No application record yet</span>'}</td><td>${safe(formatDate(job.scraped_at || job.date_posted || ""))}</td><td>${job.job_url ? `<a class="text-link" href="${safe(job.job_url)}" target="_blank" rel="noopener noreferrer">Open</a>` : "-"}</td></tr>`; }).join("");
+      container.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Role</th><th>Company</th><th>Source</th><th>Application</th><th>Captured</th><th>Link</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    function populateJobFilters(){
+      const sourceSelect=document.getElementById("jobSource"); const remoteSelect=document.getElementById("jobRemote");
+      const sources=Array.from(new Set((state.data.jobs || []).map(job => job.source).filter(Boolean))).sort();
+      const remotes=Array.from(new Set((state.data.jobs || []).map(job => job.remote_type).filter(Boolean))).sort();
+      setSelectOptions(sourceSelect,"All sources",sources,state.ui.jobSource);
+      setSelectOptions(remoteSelect,"All remote types",remotes,state.ui.jobRemote);
+    }
+
+    function setSelectOptions(selectElement,defaultLabel,values,selectedValue){
+      const previous=selectedValue || "all";
+      selectElement.innerHTML=[`<option value="all">${safe(defaultLabel)}</option>`].concat(values.map(value => `<option value="${safe(value)}">${safe(value)}</option>`)).join("");
+      selectElement.value=(values.includes(previous) || previous === "all") ? previous : "all";
+    }
+
+    function renderSourceConversion(){
+      const container=document.getElementById("sourceConversion"); const entries=Object.entries(state.data.source_conversion || {});
+      if(entries.length === 0){ container.innerHTML='<div class="empty">Source conversion appears once applications have been created.</div>'; return; }
+      container.innerHTML=entries.map(([source,stats]) => `<div class="list-item"><div><strong>${safe(source)}</strong><span class="muted-inline">Applications: ${safe(stats.applications ?? 0)}</span></div><span>${safe(stats.interviews ?? 0)} interviews | ${safe(stats.offers ?? 0)} offers</span></div>`).join("");
+    }
+
+    function renderFollowups(){
+      const container=document.getElementById("followupsDue"); const items=state.data.followups_due || [];
+      if(items.length === 0){ container.innerHTML='<div class="empty">No due follow-ups right now.</div>'; return; }
+      container.innerHTML=items.map(application => { const job=state.index.jobsById[application.job_id] || {}; return `<div class="list-item"><div><strong>${safe(job.company || application.application_id)}</strong><span class="muted-inline">${safe(job.title_raw || application.application_id)}</span></div><span>${safe(application.next_followup_on || "-")} | ${safe(titleCase(application.status || "-"))}</span></div>`; }).join("");
+    }
+
+    function renderTrackerHealth(){
+      const container=document.getElementById("trackerHealth"); const dashboard=state.data.dashboard || {}; const latestActivity=(state.data.activity || [])[0] || null;
+      const lines=[{label:"Tracker",value:state.data.tracker || tracker()},{label:"Unique sources",value:dashboard.source_count ?? 0},{label:"Offer rate",value:`${dashboard.offer_rate_pct ?? 0}%`},{label:"Median response",value:`${dashboard.median_response_days ?? 0} days`}];
+      if(latestActivity){ lines.push({label:"Latest event",value:`${titleCase(latestActivity.event || "-")} | ${formatDate(latestActivity.event_at || "")}`}); }
+      container.innerHTML=lines.map(item => `<div class="list-item"><strong>${safe(item.label)}</strong><span>${safe(item.value)}</span></div>`).join("");
+    }
+
+    function renderActivityTab(){
+      const container=document.getElementById("activityFeed"); const items=state.data.activity || [];
+      if(items.length === 0){ container.innerHTML='<div class="empty">No activity records available yet.</div>'; return; }
+      container.innerHTML=items.map(item => `<article class="activity-item"><div class="topline"><strong>${safe(titleCase(item.event || "-"))}</strong><span class="muted-inline">${safe(formatDate(item.event_at || ""))}</span></div><div class="chip-row"><span class="chip">${safe(item.entity_type || "-")}</span><span class="chip">${safe(item.entity_id || "-")}</span></div><div class="details">${safe(item.details || "No extra details stored.")}</div></article>`).join("");
+    }
+
+    function renderDocumentLinks(application){ const documents=application.documents || {}; const entries=Object.keys(documents); if(entries.length === 0){ return '<span class="muted-inline">No docs</span>'; } return entries.map(key => `<a class="doc-link" href="/files/applications/${encodeURIComponent(application.application_id)}/${encodeURIComponent(key)}?tracker=${encodeURIComponent(tracker())}" target="_blank" rel="noopener noreferrer">${safe(titleCase(key))}</a>`).join(""); }
+
+    function bindStaticControls(){
+      document.getElementById("runDailyButton").addEventListener("click",runDaily);
+      document.getElementById("refreshButton").addEventListener("click",loadOverview);
+      document.getElementById("dashboardButton").addEventListener("click",loadDashboardOnly);
+      document.getElementById("tracker").addEventListener("change",loadOverview);
+      document.querySelectorAll(".tab-button").forEach(button => { button.addEventListener("click",() => activateTab(button.dataset.tab)); });
+      document.getElementById("queueSearch").addEventListener("input",event => { state.ui.queueSearch=event.target.value; renderQueueTab(); });
+      document.getElementById("queueDecision").addEventListener("change",event => { state.ui.queueDecision=event.target.value; renderQueueTab(); });
+      document.getElementById("applicationSearch").addEventListener("input",event => { state.ui.applicationSearch=event.target.value; renderApplicationsTab(); });
+      document.getElementById("applicationStatus").addEventListener("change",event => { state.ui.applicationStatus=event.target.value; renderApplicationsTab(); });
+      document.getElementById("applicationOwner").addEventListener("change",event => { state.ui.applicationOwner=event.target.value; renderApplicationsTab(); });
+      document.getElementById("applicationSort").addEventListener("change",event => { state.ui.applicationSort=event.target.value; renderApplicationsTab(); });
+      document.getElementById("jobSearch").addEventListener("input",event => { state.ui.jobSearch=event.target.value; renderJobsTab(); });
+      document.getElementById("jobSource").addEventListener("change",event => { state.ui.jobSource=event.target.value; renderJobsTab(); });
+      document.getElementById("jobRemote").addEventListener("change",event => { state.ui.jobRemote=event.target.value; renderJobsTab(); });
+      document.getElementById("jobSort").addEventListener("change",event => { state.ui.jobSort=event.target.value; renderJobsTab(); });
+    }
+
+    document.addEventListener("DOMContentLoaded",() => {
+      document.getElementById("tracker").value=defaultTracker;
+      bindStaticControls();
+      activateTab(state.ui.tab);
+      loadOverview();
+    });
+  </script>
+</body>
+</html>

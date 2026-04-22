@@ -1,0 +1,4 @@
+I am applying for the {{title}} role at {{company}}.
+I bring AI product and GenAI delivery experience across enterprise workflows.
+Key strengths: roadmap ownership, stakeholder alignment, and measurable business outcomes.
+

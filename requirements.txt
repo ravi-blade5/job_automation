@@ -1,0 +1,5 @@
+# External dependencies are optional; core pipeline runs on Python stdlib.
+# Add these only if needed for richer integrations.
+requests>=2.32.0
+gspread>=6.1.2
+google-auth>=2.33.0

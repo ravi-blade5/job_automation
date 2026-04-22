@@ -1,0 +1,42 @@
+[
+  {
+    "external_id": "j-1001",
+    "title_raw": "AI Product Manager - Enterprise Automation",
+    "company": "Alpha Systems",
+    "location": "Bengaluru, India",
+    "remote_type": "hybrid",
+    "job_url": "https://jobs.alpha.example/1001",
+    "date_posted": "2026-03-29",
+    "description_text": "Own product strategy, roadmap, and go-to-market for enterprise GenAI workflows. Partner with engineering on RAG and OpenAI API integrations. Drive KPI ownership, stakeholder management, Agile delivery, and partner ecosystem development across telecom, financial services, and AMS support workflows."
+  },
+  {
+    "external_id": "j-1002",
+    "title_raw": "GenAI Solutions Lead",
+    "company": "Pacific Digital",
+    "location": "Singapore",
+    "remote_type": "remote",
+    "job_url": "https://careers.pacific.example/genai-solutions-lead",
+    "date_posted": "2026-03-28",
+    "description_text": "Lead GenAI architecture, prompt engineering standards, RAG evaluation and model deployment. Work with Vertex AI and OpenAI API. Govern Responsible AI controls and enterprise adoption, including workflow automation and support process modernization."
+  },
+  {
+    "external_id": "j-1003",
+    "title_raw": "Product Operations Manager",
+    "company": "ScaleOps",
+    "location": "Remote",
+    "remote_type": "remote",
+    "job_url": "https://jobs.scaleops.example/ops-manager",
+    "date_posted": "2026-03-27",
+    "description_text": "Run cross-functional planning, analytics reporting, and process improvements across support operations."
+  },
+  {
+    "external_id": "j-1001-dup",
+    "title_raw": "AI Product Manager - Enterprise Automation",
+    "company": "Alpha Systems",
+    "location": "Bengaluru, India",
+    "remote_type": "hybrid",
+    "job_url": "https://jobs.alpha.example/1001",
+    "date_posted": "2026-03-30",
+    "description_text": "Duplicate listing of AI Product Manager."
+  }
+]

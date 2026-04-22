@@ -1,0 +1,4 @@
+interface:
+  display_name: "Job Hunt Outreach"
+  short_description: "Mirror job leads and tailor outreach."
+  default_prompt: "Use $job-hunt-outreach to refresh the job-hunt mirror and shortlist outreach-ready roles."

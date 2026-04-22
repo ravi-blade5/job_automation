@@ -1,0 +1,4 @@
+Hi {{name_or_team}}, I am interested in the {{title}} opening at {{company}}.
+My background combines AI product strategy and enterprise GenAI solution delivery.
+If relevant, I would appreciate a referral or a pointer to the right recruiter.
+

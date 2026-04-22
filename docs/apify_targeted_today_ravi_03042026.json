@@ -1,0 +1,14 @@
+{
+  "queries": [
+    "AI Product Manager",
+    "GenAI Product Manager",
+    "AI Solutions Architect",
+    "AI Presales Consultant"
+  ],
+  "locations": [
+    "India",
+    "Singapore",
+    "Remote"
+  ],
+  "max_results_per_run": 8
+}
