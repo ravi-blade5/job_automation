@@ -368,6 +368,9 @@ def _build_pipeline(settings: Settings, tracker_backend: str) -> JobAutomationPi
     artifact_generator = ApplicationArtifactGenerator(
         artifacts_root=settings.artifacts_dir,
         resume_dir=settings.resume_dir,
+        gcs_bucket=settings.gcs_bucket,
+        gcs_prefix=settings.gcs_artifacts_prefix,
+        gcp_project_id=settings.gcp_project_id,
     )
     jd_parser = _build_jd_parser(settings)
     enricher = _build_enricher(settings)

@@ -135,8 +135,11 @@ class JobAutomationPipeline:
         deduped = dedupe_jobs(raw_jobs)
         region_filtered = [job for job in deduped if self._matches_region(job)]
         focused = [job for job in region_filtered if self._matches_title_focus(job)]
-        for job in focused:
-            self.tracker.upsert_job(job)
+        if hasattr(self.tracker, "upsert_jobs"):
+            self.tracker.upsert_jobs(focused)
+        else:
+            for job in focused:
+                self.tracker.upsert_job(job)
         self.tracker.add_activity(
             ActivityLogRecord.create(
                 entity_type="pipeline",
@@ -152,22 +155,35 @@ class JobAutomationPipeline:
 
     def score_all_jobs(self) -> int:
         scored_count = 0
+        pending_fit_scores = []
+        pending_company_contexts = []
         company_cache = self.tracker.list_company_context()
         for job in self.tracker.list_jobs():
-            _ = self.jd_parser.parse(job)
             for role_track in (RoleTrack.AI_PM, RoleTrack.GENAI_LEAD):
                 existing_fit = self.tracker.get_fit_score(job.job_id, role_track.value)
                 if existing_fit:
                     continue
                 fit = self.scorer.score(job, role_track)
-                self.tracker.upsert_fit_score(fit)
+                pending_fit_scores.append(fit)
                 scored_count += 1
 
             company_key = job.company.strip().lower()
             if company_key and company_key not in company_cache:
                 context = self.company_enricher.enrich(job.company, job.description_text)
-                self.tracker.upsert_company_context(context)
+                pending_company_contexts.append(context)
                 company_cache[company_key] = context
+
+        if hasattr(self.tracker, "upsert_fit_scores"):
+            self.tracker.upsert_fit_scores(pending_fit_scores)
+        else:
+            for fit in pending_fit_scores:
+                self.tracker.upsert_fit_score(fit)
+
+        if hasattr(self.tracker, "upsert_company_contexts"):
+            self.tracker.upsert_company_contexts(pending_company_contexts)
+        else:
+            for context in pending_company_contexts:
+                self.tracker.upsert_company_context(context)
 
         self.tracker.add_activity(
             ActivityLogRecord.create(
@@ -180,12 +196,21 @@ class JobAutomationPipeline:
         return scored_count
 
     def build_review_queue(self) -> int:
-        queued = 0
+        existing_job_ids = {
+            app.job_id
+            for app in self.tracker.list_applications()
+            if app.status != ApplicationStatus.CLOSED
+        }
+        fits_by_job: Dict[str, List] = defaultdict(list)
+        for fit in self.tracker.list_fit_scores():
+            fits_by_job[fit.job_id].append(fit)
+
+        pending_applications = []
+        pending_activities = []
         for job in self.tracker.list_jobs():
-            existing = self.tracker.find_application_by_job(job.job_id)
-            if existing:
+            if job.job_id in existing_job_ids:
                 continue
-            fits = self.tracker.list_fit_scores(job_id=job.job_id)
+            fits = fits_by_job.get(job.job_id, [])
             eligible = [fit for fit in fits if fit.decision != Decision.LOW_FIT]
             if not eligible:
                 continue
@@ -196,8 +221,8 @@ class JobAutomationPipeline:
                 decision=best_fit.decision,
                 fit_score=best_fit.fit_score,
             )
-            self.tracker.upsert_application(application)
-            self.tracker.add_activity(
+            pending_applications.append(application)
+            pending_activities.append(
                 ActivityLogRecord.create(
                     entity_type="application",
                     entity_id=application.application_id,
@@ -205,8 +230,21 @@ class JobAutomationPipeline:
                     details=f"job_id={job.job_id}, role_track={best_fit.role_track.value}, fit={best_fit.fit_score}",
                 )
             )
-            queued += 1
-        return queued
+            existing_job_ids.add(job.job_id)
+
+        if hasattr(self.tracker, "upsert_applications"):
+            self.tracker.upsert_applications(pending_applications)
+        else:
+            for application in pending_applications:
+                self.tracker.upsert_application(application)
+
+        if hasattr(self.tracker, "add_activities"):
+            self.tracker.add_activities(pending_activities)
+        else:
+            for activity in pending_activities:
+                self.tracker.add_activity(activity)
+
+        return len(pending_applications)
 
     def approve_application(self, application_id: str) -> ApplicationRecord:
         application = self._must_get_application(application_id)

@@ -153,6 +153,15 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
             secondary_match=secondary_match or None,
         )
 
+    def upsert_jobs(self, records: List[JobIngestRecord]) -> None:
+        rows = []
+        for record in records:
+            secondary_match: Dict[str, str] = {}
+            if record.job_url.strip():
+                secondary_match["job_url"] = record.job_url
+            rows.append((record.job_id, record.to_dict(), secondary_match or None))
+        self._upsert_rows(self.sheets.jobs, "job_id", rows)
+
     def list_jobs(self) -> List[JobIngestRecord]:
         rows = self._read_rows(self.sheets.jobs)
         return [JobIngestRecord.from_dict(row) for row in rows]
@@ -166,6 +175,15 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
         payload = record.to_dict()
         payload["fit_id"] = fit_id
         self._upsert_row(self.sheets.fit_scores, "fit_id", fit_id, payload)
+
+    def upsert_fit_scores(self, records: List[FitScoreRecord]) -> None:
+        rows = []
+        for record in records:
+            fit_id = f"{record.job_id}::{record.role_track.value}"
+            payload = record.to_dict()
+            payload["fit_id"] = fit_id
+            rows.append((fit_id, payload, None))
+        self._upsert_rows(self.sheets.fit_scores, "fit_id", rows)
 
     def list_fit_scores(self, job_id: str | None = None) -> List[FitScoreRecord]:
         rows = self._read_rows(self.sheets.fit_scores)
@@ -186,6 +204,10 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
             record.application_id,
             record.to_dict(),
         )
+
+    def upsert_applications(self, records: List[ApplicationRecord]) -> None:
+        rows = [(record.application_id, record.to_dict(), None) for record in records]
+        self._upsert_rows(self.sheets.applications, "application_id", rows)
 
     def get_application(self, application_id: str) -> Optional[ApplicationRecord]:
         row = self._find_row(self.sheets.applications, "application_id", application_id)
@@ -219,6 +241,10 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
             record.company,
             record.to_dict(),
         )
+
+    def upsert_company_contexts(self, records: List[CompanyContextRecord]) -> None:
+        rows = [(record.company, record.to_dict(), None) for record in records]
+        self._upsert_rows(self.sheets.companies, "company", rows)
 
     def list_company_context(self) -> Dict[str, CompanyContextRecord]:
         rows = self._read_rows(self.sheets.companies)
@@ -276,6 +302,9 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
 
     def add_activity(self, record: ActivityLogRecord) -> None:
         self._append_row(self.sheets.activity_log, record.to_dict())
+
+    def add_activities(self, records: List[ActivityLogRecord]) -> None:
+        self._append_rows(self.sheets.activity_log, [record.to_dict() for record in records])
 
     def list_activity(self) -> List[ActivityLogRecord]:
         rows = self._read_rows(self.sheets.activity_log)
@@ -391,6 +420,102 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
         if normalized_id_value:
             self._index_cache[index_key][normalized_id_value] = row_number
 
+    def _upsert_rows(
+        self,
+        sheet_name: str,
+        id_field: str,
+        rows_to_upsert: List[tuple[str, Dict[str, object], Optional[Dict[str, str]]]],
+    ) -> None:
+        if not rows_to_upsert:
+            return
+        worksheet = self._worksheet(sheet_name)
+        headers = self._table_headers[sheet_name]
+        records = self._read_rows(sheet_name)
+        index_key = (sheet_name, id_field)
+        if index_key not in self._index_cache:
+            self._index_cache[index_key] = {
+                _normalize_match_value(row.get(id_field, "")): idx
+                for idx, row in enumerate(records, start=2)
+                if _normalize_match_value(row.get(id_field, ""))
+            }
+
+        append_values: List[List[object]] = []
+        append_payloads: List[tuple[str, Dict[str, object]]] = []
+        updates: List[tuple[int, List[object], Dict[str, object], str]] = []
+        for id_value, payload, secondary_match in rows_to_upsert:
+            normalized_id_value = _normalize_match_value(id_value)
+            row_number = self._index_cache[index_key].get(normalized_id_value)
+            if row_number is None and secondary_match:
+                for field_name, field_value in secondary_match.items():
+                    row_number = self._find_row_number_by_field(
+                        records=records,
+                        field_name=field_name,
+                        field_value=field_value,
+                    )
+                    if row_number is not None:
+                        break
+
+            values = [self._serialize_value(payload.get(header, "")) for header in headers]
+            normalized_payload = {header: payload.get(header, "") for header in headers}
+            if row_number is None:
+                append_values.append(values)
+                append_payloads.append((normalized_id_value, self._deserialize_row(normalized_payload)))
+            else:
+                row_payload = self._deserialize_row(normalized_payload)
+                if 0 <= row_number - 2 < len(records) and records[row_number - 2] == row_payload:
+                    continue
+                updates.append((row_number, values, row_payload, normalized_id_value))
+
+        if append_values:
+            self._with_retry(lambda: worksheet.append_rows(append_values, value_input_option="RAW"))
+            next_row_number = len(records) + 2
+            for normalized_id_value, row_payload in append_payloads:
+                records.append(row_payload)
+                if normalized_id_value:
+                    self._index_cache[index_key][normalized_id_value] = next_row_number
+                next_row_number += 1
+
+        end_col = _column_label(len(headers))
+        for chunk in _chunks(updates, 50):
+            batch_payload = [
+                {
+                    "range": f"A{row_number}:{end_col}{row_number}",
+                    "values": [values],
+                }
+                for row_number, values, _row_payload, _normalized_id_value in chunk
+            ]
+            self._with_retry(
+                lambda batch_payload=batch_payload: worksheet.batch_update(
+                    batch_payload,
+                    value_input_option="RAW",
+                )
+            )
+            for row_number, _values, row_payload, normalized_id_value in chunk:
+                records[row_number - 2] = row_payload
+                if normalized_id_value:
+                    self._index_cache[index_key][normalized_id_value] = row_number
+
+        self._rows_cache[sheet_name] = records
+
+    def _append_rows(self, sheet_name: str, payloads: List[Dict[str, object]]) -> None:
+        if not payloads:
+            return
+        worksheet = self._worksheet(sheet_name)
+        headers = self._table_headers[sheet_name]
+        values = [
+            [self._serialize_value(payload.get(header, "")) for header in headers]
+            for payload in payloads
+        ]
+        self._with_retry(lambda: worksheet.append_rows(values, value_input_option="RAW"))
+        if sheet_name in self._rows_cache:
+            rows = self._rows_cache[sheet_name]
+            for payload in payloads:
+                rows.append(self._deserialize_row({header: payload.get(header, "") for header in headers}))
+            self._rows_cache[sheet_name] = rows
+
+    def _append_row(self, sheet_name: str, payload: Dict[str, object]) -> None:
+        self._append_rows(sheet_name, [payload])
+
     def _find_row_number_by_field(
         self,
         records: List[Dict[str, object]],
@@ -404,16 +529,6 @@ class GoogleSheetsTrackingRepository(TrackingRepository):
             if _normalize_match_value(row.get(field_name, "")) == normalized_field_value:
                 return idx
         return None
-
-    def _append_row(self, sheet_name: str, payload: Dict[str, object]) -> None:
-        worksheet = self._worksheet(sheet_name)
-        headers = self._table_headers[sheet_name]
-        values = [self._serialize_value(payload.get(header, "")) for header in headers]
-        self._with_retry(lambda: worksheet.append_row(values, value_input_option="RAW"))
-        if sheet_name in self._rows_cache:
-            rows = self._rows_cache[sheet_name]
-            rows.append(self._deserialize_row({header: payload.get(header, "") for header in headers}))
-            self._rows_cache[sheet_name] = rows
 
     def _serialize_value(self, value: object) -> object:
         if isinstance(value, (dict, list)):
@@ -480,6 +595,10 @@ def _column_label(index_1_based: int) -> str:
         index, remainder = divmod(index - 1, 26)
         result = chr(65 + remainder) + result
     return result
+
+
+def _chunks(values: List[object], size: int) -> List[List[object]]:
+    return [values[index : index + size] for index in range(0, len(values), size)]
 
 
 def _is_quota_error(exc: Exception) -> bool:

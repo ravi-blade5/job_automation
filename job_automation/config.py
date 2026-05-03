@@ -72,6 +72,16 @@ def _normalize_airtable_base_id(raw: str) -> str:
     return value
 
 
+def _materialize_env_file(env_name: str, default_target: str) -> Path | None:
+    raw = os.getenv(env_name, "").strip()
+    if not raw:
+        return None
+    target = Path(os.getenv(f"{env_name}_FILE", default_target).strip()).resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(raw, encoding="utf-8")
+    return target
+
+
 @dataclass(frozen=True)
 class Settings:
     tracker_backend: str
@@ -126,6 +136,10 @@ class Settings:
     must_apply_threshold: int
     good_fit_threshold: int
 
+    gcp_project_id: str
+    gcs_bucket: str
+    gcs_artifacts_prefix: str
+
     data_dir: Path
     artifacts_dir: Path
     resume_dir: Path
@@ -147,6 +161,16 @@ def load_settings() -> Settings:
 
     data_dir.mkdir(parents=True, exist_ok=True)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
+    default_apify_spec_file = package_root / "docs" / "apify_targeted_ravi_03042026.json"
+    google_credentials_file = _materialize_env_file(
+        "GOOGLE_SHEETS_CREDENTIALS_JSON",
+        "/tmp/job_automation/google_service_account.json",
+    ) or Path(
+        os.getenv(
+            "GOOGLE_SHEETS_CREDENTIALS_FILE",
+            "./job_automation/google_service_account.json",
+        ).strip()
+    ).resolve()
 
     return Settings(
         tracker_backend=os.getenv("JOB_AUTOMATION_TRACKER", "json").strip().lower(),
@@ -196,7 +220,7 @@ def load_settings() -> Settings:
         apify_refresh_spec_file=Path(
             os.getenv(
                 "JOB_AUTOMATION_APIFY_SPEC_FILE",
-                "./job_automation/docs/apify_targeted_ravi_03042026.json",
+                str(default_apify_spec_file),
             ).strip()
         ).resolve(),
         apify_run_wait_seconds=_as_int("JOB_AUTOMATION_APIFY_RUN_WAIT_SECONDS", 300),
@@ -237,12 +261,7 @@ def load_settings() -> Settings:
         google_sheets_spreadsheet_id=os.getenv(
             "GOOGLE_SHEETS_SPREADSHEET_ID", ""
         ).strip(),
-        google_sheets_credentials_file=Path(
-            os.getenv(
-                "GOOGLE_SHEETS_CREDENTIALS_FILE",
-                "./job_automation/google_service_account.json",
-            ).strip()
-        ).resolve(),
+        google_sheets_credentials_file=google_credentials_file,
         google_sheets_sheet_jobs=os.getenv("GOOGLE_SHEETS_SHEET_JOBS", "Jobs").strip(),
         google_sheets_sheet_fit_scores=os.getenv(
             "GOOGLE_SHEETS_SHEET_FIT_SCORES", "FitScores"
@@ -264,6 +283,18 @@ def load_settings() -> Settings:
         ).strip(),
         must_apply_threshold=_as_int("JOB_AUTOMATION_MUST_APPLY_THRESHOLD", 75),
         good_fit_threshold=_as_int("JOB_AUTOMATION_GOOD_FIT_THRESHOLD", 60),
+        gcp_project_id=os.getenv(
+            "GCP_PROJECT_ID", os.getenv("GOOGLE_CLOUD_PROJECT", "")
+        ).strip(),
+        gcs_bucket=os.getenv("JOB_AUTOMATION_GCS_BUCKET", "")
+        .strip()
+        .removeprefix("gs://")
+        .rstrip("/"),
+        gcs_artifacts_prefix=os.getenv(
+            "JOB_AUTOMATION_GCS_ARTIFACTS_PREFIX", "artifacts"
+        )
+        .strip()
+        .strip("/"),
         data_dir=data_dir,
         artifacts_dir=artifacts_dir,
         resume_dir=resume_dir,

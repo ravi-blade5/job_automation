@@ -3,3 +3,4 @@
 requests>=2.32.0
 gspread>=6.1.2
 google-auth>=2.33.0
+google-cloud-storage>=2.18.0

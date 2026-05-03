@@ -1,0 +1,15 @@
+.git
+.env
+google_service_account.json
+data/
+data_demo/
+data_demo2/
+data_demo3/
+artifacts/
+backups/
+__pycache__/
+*.pyc
+.pytest_cache/
+resume/feedback_audio_chunks/
+resume/feedback_transcript/
+resume/latex/build/

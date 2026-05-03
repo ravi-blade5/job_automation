@@ -4,7 +4,10 @@ import argparse
 import html
 import json
 import mimetypes
+import os
+import traceback
 from collections import Counter, defaultdict
+from dataclasses import replace
 from datetime import date, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -13,6 +16,7 @@ from typing import Dict, List
 from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
+from .apify_refresh import refresh_apify_datasets
 from .cli import _build_pipeline
 from .config import load_settings
 from .models import (
@@ -182,9 +186,10 @@ def _build_handler(default_tracker: str):
             except (LookupError, FileNotFoundError) as exc:
                 self._send_error_json(HTTPStatus.NOT_FOUND, str(exc))
             except Exception as exc:
+                traceback.print_exc()
                 self._send_error_json(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
-                    str(exc) or exc.__class__.__name__,
+                    _format_exception(exc),
                 )
 
         def do_POST(self) -> None:
@@ -192,7 +197,10 @@ def _build_handler(default_tracker: str):
             try:
                 if parsed.path == "/api/run-daily":
                     tracker_backend = _tracker_from_query(parsed.query, default_tracker)
-                    pipeline = _pipeline_for_tracker(tracker_backend)
+                    pipeline = _pipeline_for_tracker(
+                        tracker_backend,
+                        refresh_apify=_env_bool("JOB_AUTOMATION_REFRESH_APIFY_BEFORE_DAILY", False),
+                    )
                     result = pipeline.run_daily()
                     self._send_json(
                         HTTPStatus.OK,
@@ -257,9 +265,10 @@ def _build_handler(default_tracker: str):
             except (LookupError, FileNotFoundError) as exc:
                 self._send_error_json(HTTPStatus.NOT_FOUND, str(exc))
             except Exception as exc:
+                traceback.print_exc()
                 self._send_error_json(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
-                    str(exc) or exc.__class__.__name__,
+                    _format_exception(exc),
                 )
 
         def log_message(self, format: str, *args: object) -> None:
@@ -319,12 +328,38 @@ def _build_handler(default_tracker: str):
     return JobAutomationHandler
 
 
-def _pipeline_for_tracker(tracker_backend: str) -> JobAutomationPipeline:
+def _pipeline_for_tracker(
+    tracker_backend: str,
+    *,
+    refresh_apify: bool = False,
+) -> JobAutomationPipeline:
     settings = load_settings()
     normalized_tracker = _normalize_tracker_backend(
         tracker_backend,
         settings.tracker_backend,
     )
+    if refresh_apify and settings.apify_api_token:
+        runtime_env = settings.data_dir / "runtime_apify.env"
+        runtime_env.parent.mkdir(parents=True, exist_ok=True)
+        if not runtime_env.exists():
+            runtime_env.write_text("APIFY_DATASET_IDS=\n", encoding="utf-8")
+        refresh_result = refresh_apify_datasets(
+            api_token=settings.apify_api_token,
+            env_path=runtime_env,
+            summary_dir=settings.artifacts_dir / "apify_refresh",
+            existing_dataset_ids=[],
+            provider=settings.apify_refresh_provider,
+            spec_path=settings.apify_refresh_spec_file,
+            task_ids=settings.apify_task_ids,
+            wait_seconds=settings.apify_run_wait_seconds,
+        )
+        if refresh_result.successful_dataset_ids:
+            settings = replace(
+                settings,
+                apify_dataset_ids=refresh_result.successful_dataset_ids,
+            )
+        return _build_pipeline(settings, normalized_tracker)
+
     with _PIPELINE_CACHE_LOCK:
         cached = _PIPELINE_CACHE.get(normalized_tracker)
         if cached is not None:
@@ -332,6 +367,15 @@ def _pipeline_for_tracker(tracker_backend: str) -> JobAutomationPipeline:
         pipeline = _build_pipeline(settings, normalized_tracker)
         _PIPELINE_CACHE[normalized_tracker] = pipeline
         return pipeline
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = str(os.getenv(name, str(default))).strip().lower()
+    if raw in {"1", "true", "yes", "y", "on"}:
+        return True
+    if raw in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
 
 
 def _normalize_tracker_backend(raw: str | None, fallback: str) -> str:
@@ -548,13 +592,32 @@ def _resolve_application_document(
             f"No stored document '{document_type}' for application {application_id}."
         )
     document_path = Path(raw_path).expanduser().resolve()
-    try:
-        document_path.relative_to(WORKSPACE_ROOT)
-    except ValueError as exc:
-        raise PermissionError("Document path is outside the allowed workspace.") from exc
+    allowed_roots = [WORKSPACE_ROOT]
+    artifact_generator = getattr(pipeline, "artifact_generator", None)
+    for attr in ("artifacts_root", "resume_dir"):
+        root = getattr(artifact_generator, attr, None)
+        if root:
+            allowed_roots.append(Path(root).resolve())
+    if not any(_is_relative_to(document_path, root) for root in allowed_roots):
+        raise PermissionError("Document path is outside the allowed workspace.")
     if not document_path.is_file():
         raise FileNotFoundError(f"Document not found: {document_path}")
     return document_path
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _format_exception(exc: Exception) -> str:
+    message = str(exc).strip()
+    if message:
+        return f"{exc.__class__.__name__}: {message}"
+    return exc.__class__.__name__
 
 
 def _to_date(raw: str) -> date | None:
@@ -580,3 +643,7 @@ def _median(values: List[int]) -> float:
 def _render_index_html(default_tracker: str) -> str:
     template = INDEX_TEMPLATE.read_text(encoding="utf-8")
     return template.replace("__DEFAULT_TRACKER__", html.escape(default_tracker, quote=True))
+
+
+if __name__ == "__main__":
+    main()

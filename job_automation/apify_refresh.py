@@ -80,32 +80,52 @@ def refresh_apify_datasets(
         max_results = int(spec.get("max_results_per_run", 8) or 8)
         if not queries or not locations:
             raise RuntimeError("Apify spec must contain non-empty queries and locations.")
-        for query in queries:
-            for location in locations:
-                run = _call_actor(
-                    token=token,
-                    actor_id=actor_id,
-                    provider=provider,
-                    query=query,
-                    location=location,
-                    max_results=max_results,
-                    wait_seconds=wait_seconds,
-                )
-                runs.append(
-                    {
-                        "query": query,
-                        "location": location,
-                        "dataset_id": str(run.get("defaultDatasetId", "")).strip(),
-                        "status": str(run.get("status", "")).upper(),
-                        "run_id": str(run.get("id", "")).strip(),
-                    }
-                )
+        if provider == "linkedin":
+            run = _call_linkedin_actor(
+                token=token,
+                actor_id=actor_id,
+                queries=queries,
+                locations=locations,
+                max_results_per_search=max_results,
+                wait_seconds=wait_seconds,
+            )
+            runs.append(
+                {
+                    "query": ", ".join(queries),
+                    "location": ", ".join(locations),
+                    "dataset_id": str(run.get("defaultDatasetId", "")).strip(),
+                    "status": str(run.get("status", "")).upper(),
+                    "run_id": str(run.get("id", "")).strip(),
+                }
+            )
+        else:
+            for query in queries:
+                for location in locations:
+                    run = _call_actor(
+                        token=token,
+                        actor_id=actor_id,
+                        provider=provider,
+                        query=query,
+                        location=location,
+                        max_results=max_results,
+                        wait_seconds=wait_seconds,
+                    )
+                    runs.append(
+                        {
+                            "query": query,
+                            "location": location,
+                            "dataset_id": str(run.get("defaultDatasetId", "")).strip(),
+                            "status": str(run.get("status", "")).upper(),
+                            "run_id": str(run.get("id", "")).strip(),
+                        }
+                    )
 
     successful_dataset_ids = _dedupe_preserve_order(
         [
             str(item.get("dataset_id", "")).strip()
             for item in runs
-            if str(item.get("status", "")).upper() == "SUCCEEDED" and str(item.get("dataset_id", "")).strip()
+            if _is_usable_dataset_status(str(item.get("status", "")).upper())
+            and str(item.get("dataset_id", "")).strip()
         ]
     )
     used_existing_dataset_ids = False
@@ -201,6 +221,40 @@ def _call_actor(
     return data
 
 
+def _call_linkedin_actor(
+    *,
+    token: str,
+    actor_id: str,
+    queries: Sequence[str],
+    locations: Sequence[str],
+    max_results_per_search: int,
+    wait_seconds: int,
+) -> Dict[str, Any]:
+    urls = [
+        (
+            "https://www.linkedin.com/jobs/search/"
+            f"?keywords={quote(query)}&location={quote(location)}"
+        )
+        for query in queries
+        for location in locations
+    ]
+    url = (
+        f"https://api.apify.com/v2/acts/{quote(actor_id, safe='')}/runs"
+        f"?token={token}&waitForFinish=30"
+    )
+    payload = {
+        "urls": urls,
+        "maxResults": max(1, max_results_per_search) * len(urls),
+        "proxy": {"useApifyProxy": True},
+    }
+    response = request_json("POST", url, payload=payload, timeout_seconds=max(wait_seconds, 60))
+    data = _extract_data_dict(response.body)
+    status = str(data.get("status", "")).upper()
+    if status not in FINAL_RUN_STATUSES and data.get("id"):
+        data = _wait_for_run(token=token, run_id=str(data["id"]), wait_seconds=wait_seconds)
+    return data
+
+
 def _call_task(*, token: str, task_id: str, wait_seconds: int) -> Dict[str, Any]:
     url = (
         f"https://api.apify.com/v2/actor-tasks/{quote(task_id, safe='')}/runs"
@@ -228,6 +282,10 @@ def _extract_data_dict(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(data, dict):
         raise RuntimeError("Unexpected Apify response shape.")
     return data
+
+
+def _is_usable_dataset_status(status: str) -> bool:
+    return status not in {"", "FAILED", "ABORTED", "TIMED-OUT"}
 
 
 def _update_env_dataset_ids(env_path: Path, dataset_ids: Sequence[str]) -> None:
