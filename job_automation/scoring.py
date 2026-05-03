@@ -10,6 +10,7 @@ from .models import (
     RoleTrack,
     SeniorityMatch,
 )
+from .enrichment.sheet_intelligence import SheetIntelligence
 
 
 @dataclass(frozen=True)
@@ -146,6 +147,7 @@ class FitScorer:
         good_fit_threshold: int = 65,
         company_focus_keywords: Sequence[str] | None = None,
         company_focus_bonus: int = 12,
+        sheet_intelligence: SheetIntelligence | None = None,
     ):
         self.must_apply_threshold = must_apply_threshold
         self.good_fit_threshold = good_fit_threshold
@@ -153,6 +155,7 @@ class FitScorer:
             item.strip().lower() for item in (company_focus_keywords or []) if item.strip()
         ]
         self.company_focus_bonus = company_focus_bonus
+        self.sheet_intelligence = sheet_intelligence
 
     def score(self, job: JobIngestRecord, role_track: RoleTrack) -> FitScoreRecord:
         profile = AI_PM_PROFILE if role_track == RoleTrack.AI_PM else GENAI_LEAD_PROFILE
@@ -192,6 +195,14 @@ class FitScorer:
         }[seniority]
         company_focus_hit = any(keyword in company_corpus for keyword in self.company_focus_keywords)
         company_focus_score = self.company_focus_bonus if company_focus_hit else 0
+        sheet_match = self.sheet_intelligence.match(corpus) if self.sheet_intelligence else None
+        sheet_score = 0
+        if sheet_match:
+            sheet_score = min(
+                15,
+                round(sheet_match.keyword_match_pct * 0.10)
+                + round(sheet_match.benchmark_match_pct * 0.05),
+            )
 
         fit_score = min(
             100,
@@ -202,6 +213,7 @@ class FitScorer:
                 + (0.15 * tools)
                 + (0.10 * seniority_score)
                 + company_focus_score
+                + sheet_score
             ),
         )
         decision = _decision_for(
@@ -218,6 +230,7 @@ class FitScorer:
             seniority,
             decision,
             company_focus_hit,
+            sheet_match,
         )
 
         return FitScoreRecord(
@@ -326,6 +339,7 @@ def _reason_codes(
     seniority: SeniorityMatch,
     decision: Decision,
     company_focus_hit: bool,
+    sheet_match=None,
 ) -> List[str]:
     reasons: List[str] = []
     if title_match >= 45:
@@ -340,6 +354,11 @@ def _reason_codes(
         reasons.append("strong_seniority_match")
     if company_focus_hit:
         reasons.append("preferred_company_match")
+    if sheet_match and sheet_match.keyword_match_pct >= 30:
+        keywords = "|".join(list(sheet_match.matched_keywords)[:5])
+        reasons.append(f"curated_keyword_match:{keywords}" if keywords else "curated_keyword_match")
+    if sheet_match and sheet_match.benchmark_match_pct >= 25:
+        reasons.append("benchmark_jd_similarity")
     if must_have < 35:
         reasons.append("must_have_gap")
     if decision == Decision.LOW_FIT:

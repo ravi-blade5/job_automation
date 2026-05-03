@@ -10,6 +10,7 @@ from .apify_refresh import refresh_apify_datasets
 from .artifacts import ApplicationArtifactGenerator
 from .config import Settings, load_settings
 from .enrichment.jd_parser import GeminiJDParser, RuleBasedJDParser
+from .enrichment.sheet_intelligence import load_google_sheet_intelligence
 from .gcp_bundle import build_gcp_sync_bundle
 from .openclaw_sync import sync_to_openclaw_workspace
 from .outreach import FirecrawlContactFinder, ManualOutreachLeadBuilder
@@ -78,6 +79,11 @@ def main() -> None:
                 indent=2,
             )
         )
+        return
+
+    if args.command == "rescore-jobs":
+        scored = pipeline.rescore_all_jobs()
+        print(json.dumps({"scored": scored}, indent=2))
         return
 
     if args.command == "refresh-apify-datasets":
@@ -242,6 +248,9 @@ def _build_parser() -> argparse.ArgumentParser:
     run_daily = sub.add_parser("run-daily")
     _add_tracker_arg(run_daily)
 
+    rescore = sub.add_parser("rescore-jobs")
+    _add_tracker_arg(rescore)
+
     refresh_apify = sub.add_parser("refresh-apify-datasets")
     refresh_apify.add_argument(
         "--repo-root",
@@ -360,10 +369,12 @@ def _build_parser() -> argparse.ArgumentParser:
 def _build_pipeline(settings: Settings, tracker_backend: str) -> JobAutomationPipeline:
     tracker = _build_tracker(settings, tracker_backend)
     sources = _build_sources(settings)
+    sheet_intelligence = _build_sheet_intelligence(settings)
     scorer = FitScorer(
         must_apply_threshold=settings.must_apply_threshold,
         good_fit_threshold=settings.good_fit_threshold,
         company_focus_keywords=settings.company_focus_keywords,
+        sheet_intelligence=sheet_intelligence,
     )
     artifact_generator = ApplicationArtifactGenerator(
         artifacts_root=settings.artifacts_dir,
@@ -481,6 +492,19 @@ def _build_enricher(settings: Settings) -> CompanyEnricher:
             model=settings.perplexity_model,
         )
     return CompanyEnricher()
+
+
+def _build_sheet_intelligence(settings: Settings):
+    if not settings.sheet_intelligence_enabled:
+        return None
+    if not (settings.keyword_spreadsheet_id or settings.jd_repository_spreadsheet_id):
+        return None
+    return load_google_sheet_intelligence(
+        credentials_file=settings.google_sheets_credentials_file,
+        keyword_spreadsheet_id=settings.keyword_spreadsheet_id,
+        jd_repository_spreadsheet_id=settings.jd_repository_spreadsheet_id,
+        max_benchmark_jds=settings.sheet_intelligence_max_jds,
+    )
 
 
 if __name__ == "__main__":

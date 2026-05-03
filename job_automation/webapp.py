@@ -87,6 +87,7 @@ def build_overview_payload(
             "status_counts": dict(status_counts),
         },
         "dashboard": snapshot["dashboard"],
+        "intelligence": _intelligence_summary(pipeline),
         "source_conversion": snapshot["source_conversion"],
         "review_queue": review_queue,
         "jobs": [item.to_dict() for item in jobs],
@@ -160,6 +161,7 @@ def _build_handler(default_tracker: str):
                                     "status_counts": dict(snapshot["status_counts"]),
                                 },
                                 "dashboard": snapshot["dashboard"],
+                                "intelligence": _intelligence_summary(pipeline),
                                 "source_conversion": snapshot["source_conversion"],
                                 "followups_due": [
                                     item.to_dict() for item in snapshot["followups_due"][:20]
@@ -214,6 +216,22 @@ def _build_handler(default_tracker: str):
                                     "scored": result.scored,
                                     "queued": result.queued,
                                 },
+                            },
+                        },
+                    )
+                    return
+
+                if parsed.path == "/api/rescore":
+                    tracker_backend = _tracker_from_query(parsed.query, default_tracker)
+                    pipeline = _pipeline_for_tracker(tracker_backend, refresh_cache=True)
+                    scored = pipeline.rescore_all_jobs()
+                    self._send_json(
+                        HTTPStatus.OK,
+                        {
+                            "ok": True,
+                            "data": {
+                                "tracker": tracker_backend,
+                                "scored": scored,
                             },
                         },
                     )
@@ -332,6 +350,7 @@ def _pipeline_for_tracker(
     tracker_backend: str,
     *,
     refresh_apify: bool = False,
+    refresh_cache: bool = False,
 ) -> JobAutomationPipeline:
     settings = load_settings()
     normalized_tracker = _normalize_tracker_backend(
@@ -361,6 +380,8 @@ def _pipeline_for_tracker(
         return _build_pipeline(settings, normalized_tracker)
 
     with _PIPELINE_CACHE_LOCK:
+        if refresh_cache:
+            _PIPELINE_CACHE.pop(normalized_tracker, None)
         cached = _PIPELINE_CACHE.get(normalized_tracker)
         if cached is not None:
             return cached
@@ -385,6 +406,21 @@ def _normalize_tracker_backend(raw: str | None, fallback: str) -> str:
             f"Unsupported tracker '{tracker_backend}'. Choose one of: {', '.join(sorted(ALLOWED_TRACKERS))}."
         )
     return tracker_backend
+
+
+def _intelligence_summary(pipeline: JobAutomationPipeline) -> Dict[str, object]:
+    intelligence = getattr(getattr(pipeline, "scorer", None), "sheet_intelligence", None)
+    if not intelligence:
+        return {
+            "sheet_intelligence_enabled": False,
+            "keyword_count": 0,
+            "benchmark_jd_count": 0,
+        }
+    return {
+        "sheet_intelligence_enabled": True,
+        "keyword_count": getattr(intelligence, "keyword_count", 0),
+        "benchmark_jd_count": getattr(intelligence, "benchmark_count", 0),
+    }
 
 
 def _tracker_from_query(query_string: str, default_tracker: str) -> str:

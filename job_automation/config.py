@@ -133,6 +133,11 @@ class Settings:
     google_sheets_sheet_documents: str
     google_sheets_sheet_activity_log: str
 
+    sheet_intelligence_enabled: bool
+    keyword_spreadsheet_id: str
+    jd_repository_spreadsheet_id: str
+    sheet_intelligence_max_jds: int
+
     must_apply_threshold: int
     good_fit_threshold: int
 
@@ -281,6 +286,16 @@ def load_settings() -> Settings:
         google_sheets_sheet_activity_log=os.getenv(
             "GOOGLE_SHEETS_SHEET_ACTIVITY_LOG", "ActivityLog"
         ).strip(),
+        sheet_intelligence_enabled=_as_bool("JOB_AUTOMATION_ENABLE_SHEET_INTELLIGENCE", False),
+        keyword_spreadsheet_id=os.getenv(
+            "JOB_AUTOMATION_KEYWORD_SPREADSHEET_ID", ""
+        ).strip(),
+        jd_repository_spreadsheet_id=os.getenv(
+            "JOB_AUTOMATION_JD_REPOSITORY_SPREADSHEET_ID", ""
+        ).strip(),
+        sheet_intelligence_max_jds=_as_int(
+            "JOB_AUTOMATION_SHEET_INTELLIGENCE_MAX_JDS", 100
+        ),
         must_apply_threshold=_as_int("JOB_AUTOMATION_MUST_APPLY_THRESHOLD", 75),
         good_fit_threshold=_as_int("JOB_AUTOMATION_GOOD_FIT_THRESHOLD", 60),
         gcp_project_id=os.getenv(

@@ -195,6 +195,28 @@ class JobAutomationPipeline:
         )
         return scored_count
 
+    def rescore_all_jobs(self) -> int:
+        pending_fit_scores = []
+        for job in self.tracker.list_jobs():
+            for role_track in (RoleTrack.AI_PM, RoleTrack.GENAI_LEAD):
+                pending_fit_scores.append(self.scorer.score(job, role_track))
+
+        if hasattr(self.tracker, "upsert_fit_scores"):
+            self.tracker.upsert_fit_scores(pending_fit_scores)
+        else:
+            for fit in pending_fit_scores:
+                self.tracker.upsert_fit_score(fit)
+
+        self.tracker.add_activity(
+            ActivityLogRecord.create(
+                entity_type="pipeline",
+                entity_id="manual_rescore",
+                event="rescoring_completed",
+                details=f"fit_scores_written={len(pending_fit_scores)}",
+            )
+        )
+        return len(pending_fit_scores)
+
     def build_review_queue(self) -> int:
         existing_job_ids = {
             app.job_id

@@ -49,6 +49,7 @@
           </div>
           <div class="button-row">
             <button class="primary" id="runDailyButton" type="button">Run Daily</button>
+            <button class="ghost" id="rescoreButton" type="button">Rescore Jobs</button>
             <button class="ghost" id="refreshButton" type="button">Refresh</button>
             <button class="secondary" id="dashboardButton" type="button">Dashboard Only</button>
           </div>
@@ -270,6 +271,15 @@
         setBanner(`Run complete: ingested ${data.result.ingested}, accepted ${data.result.deduped}, scored ${data.result.scored}, queued ${data.result.queued}.`,`success`);
       }catch(error){ setBanner(error.message,"error"); }
     }
+
+    async function rescoreJobs(){
+      try{
+        setBanner("Re-scoring stored jobs against the latest keyword and JD intelligence...","info");
+        const data = await api(`/api/rescore?tracker=${encodeURIComponent(tracker())}`,{method:"POST",body: JSON.stringify({})});
+        await loadOverview();
+        setBanner(`Rescore complete: ${data.scored} fit scores refreshed.`,`success`);
+      }catch(error){ setBanner(error.message,"error"); }
+    }
     async function approveApplication(applicationId){ await runAction(`/api/applications/${applicationId}/approve?tracker=${encodeURIComponent(tracker())}`,"Approving application..."); }
     async function rejectApplication(applicationId){ if(!window.confirm("Reject this application from the workflow?")){ return; } await runAction(`/api/applications/${applicationId}/reject?tracker=${encodeURIComponent(tracker())}`,"Rejecting application..."); }
     async function generateArtifacts(applicationId){ await runAction(`/api/applications/${applicationId}/generate-artifacts?tracker=${encodeURIComponent(tracker())}`,"Generating resume summary, cover note, and referral message..."); }
@@ -404,8 +414,9 @@
     }
 
     function renderTrackerHealth(){
-      const container=document.getElementById("trackerHealth"); const dashboard=state.data.dashboard || {}; const latestActivity=(state.data.activity || [])[0] || null;
-      const lines=[{label:"Tracker",value:state.data.tracker || tracker()},{label:"Unique sources",value:dashboard.source_count ?? 0},{label:"Offer rate",value:`${dashboard.offer_rate_pct ?? 0}%`},{label:"Median response",value:`${dashboard.median_response_days ?? 0} days`}];
+      const container=document.getElementById("trackerHealth"); const dashboard=state.data.dashboard || {}; const intelligence=state.data.intelligence || {}; const latestActivity=(state.data.activity || [])[0] || null;
+      const intelligenceValue=intelligence.sheet_intelligence_enabled ? `${intelligence.keyword_count || 0} keywords | ${intelligence.benchmark_jd_count || 0} benchmark JDs` : "Off";
+      const lines=[{label:"Tracker",value:state.data.tracker || tracker()},{label:"Sheet intelligence",value:intelligenceValue},{label:"Unique sources",value:dashboard.source_count ?? 0},{label:"Offer rate",value:`${dashboard.offer_rate_pct ?? 0}%`},{label:"Median response",value:`${dashboard.median_response_days ?? 0} days`}];
       if(latestActivity){ lines.push({label:"Latest event",value:`${titleCase(latestActivity.event || "-")} | ${formatDate(latestActivity.event_at || "")}`}); }
       container.innerHTML=lines.map(item => `<div class="list-item"><strong>${safe(item.label)}</strong><span>${safe(item.value)}</span></div>`).join("");
     }
@@ -420,6 +431,7 @@
 
     function bindStaticControls(){
       document.getElementById("runDailyButton").addEventListener("click",runDaily);
+      document.getElementById("rescoreButton").addEventListener("click",rescoreJobs);
       document.getElementById("refreshButton").addEventListener("click",loadOverview);
       document.getElementById("dashboardButton").addEventListener("click",loadDashboardOnly);
       document.getElementById("tracker").addEventListener("change",loadOverview);
