@@ -1,0 +1,68 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{resume_shared}[2026/04/30 Shared resume styling]
+
+\RequirePackage[margin=0.4in]{geometry}
+\RequirePackage[dvipsnames]{xcolor}
+\RequirePackage{enumitem}
+\RequirePackage{hyperref}
+\RequirePackage{tabularx}
+\RequirePackage{titlesec}
+\RequirePackage{array}
+\RequirePackage{lmodern}
+
+\hypersetup{
+  colorlinks=true,
+  urlcolor=black,
+  linkcolor=black
+}
+
+\pagestyle{empty}
+\raggedbottom
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlength{\tabcolsep}{0pt}
+\renewcommand{\arraystretch}{1.0}
+\setlist[itemize]{leftmargin=1.1em, itemsep=0.12em, topsep=0.12em, parsep=0em, partopsep=0em}
+
+\definecolor{ResumeBlue}{HTML}{000000}
+
+\titleformat{\section}
+  {\normalsize\bfseries\color{ResumeBlue}}
+  {}
+  {0pt}
+  {}
+  [\vspace{0.08em}\titlerule]
+
+\titlespacing*{\section}{0pt}{0.45em}{0.25em}
+
+\newcommand{\ResumeName}[1]{{\centering\Large\bfseries #1\par}}
+
+\newcommand{\ResumeContact}[4]{%
+  {\centering\small #1 \textbar\ #2 \textbar\ \href{mailto:#3}{#3} \textbar\ \href{https://#4}{#4}\par}
+}
+
+\newcommand{\RoleEntry}[3]{%
+  \vspace{0.16em}
+  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} l r}
+  \textbf{#1} & \textbf{#3} \\
+  \textit{#2} & \\
+  \end{tabular*}
+  \vspace{-0.48em}
+}
+
+\newcommand{\MiniHeading}[1]{%
+  \vspace{0.14em}
+  {\bfseries #1\par}
+}
+
+\newcommand{\EducationEntry}[2]{%
+  #1 \hfill #2\par
+}
+
+\newcommand{\InlineSectionText}[1]{%
+  {\footnotesize #1\par}
+}
+
+\newcommand{\SkillGroup}[2]{%
+  {\footnotesize\textbf{#1:} #2\par}
+}

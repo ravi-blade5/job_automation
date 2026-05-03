@@ -28,6 +28,7 @@ from .models import (
     OwnerAction,
 )
 from .pipeline import JobAutomationPipeline
+from .resume_tailor import ResumeTailor, resolve_resume_tailor_file
 
 ALLOWED_TRACKERS = {"airtable", "google_sheets", "json"}
 INDEX_TEMPLATE = (
@@ -180,6 +181,18 @@ def _build_handler(default_tracker: str):
                     )
                     self._send_file(document_path)
                     return
+                if len(path_parts) == 4 and path_parts[:2] == ["files", "resume-tailor"]:
+                    settings = load_settings()
+                    document_path = resolve_resume_tailor_file(
+                        artifacts_dir=settings.artifacts_dir,
+                        run_id=path_parts[2],
+                        filename=path_parts[3],
+                        gcs_bucket=settings.gcs_bucket,
+                        gcs_prefix=settings.gcs_artifacts_prefix,
+                        gcp_project_id=settings.gcp_project_id,
+                    )
+                    self._send_file(document_path)
+                    return
                 self._send_error_json(HTTPStatus.NOT_FOUND, "Route not found.")
             except ValueError as exc:
                 self._send_error_json(HTTPStatus.BAD_REQUEST, str(exc))
@@ -235,6 +248,25 @@ def _build_handler(default_tracker: str):
                             },
                         },
                     )
+                    return
+
+                if parsed.path == "/api/resume-tailor":
+                    settings = load_settings()
+                    payload = self._read_json_body()
+                    tailor = ResumeTailor(
+                        resume_dir=settings.resume_dir,
+                        artifacts_dir=settings.artifacts_dir,
+                        gcs_bucket=settings.gcs_bucket,
+                        gcs_prefix=settings.gcs_artifacts_prefix,
+                        gcp_project_id=settings.gcp_project_id,
+                    )
+                    result = tailor.generate(
+                        job_description=str(payload.get("job_description", "")),
+                        target_track=str(payload.get("target_track", "auto")),
+                        role_title=str(payload.get("role_title", "")),
+                        company=str(payload.get("company", "")),
+                    )
+                    self._send_json(HTTPStatus.OK, {"ok": True, "data": result.to_dict()})
                     return
 
                 path_parts = [part for part in parsed.path.split("/") if part]

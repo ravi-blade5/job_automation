@@ -11,7 +11,7 @@
     .hero-card{padding:30px;border-radius:var(--radius-xl);position:relative;overflow:hidden}.hero-card::after{content:"";position:absolute;inset:auto -12% -60% 42%;height:230px;background:linear-gradient(135deg,rgba(15,118,110,.22),rgba(23,50,77,.1));border-radius:999px;filter:blur(12px);pointer-events:none}.control-panel{padding:24px;border-radius:var(--radius-xl);display:flex;flex-direction:column;gap:18px;justify-content:space-between}
     .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(21,34,51,.06);color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}h1{margin:14px 0 10px;font-size:clamp(34px,4vw,56px);line-height:.95;letter-spacing:-.05em}h2{margin:0 0 8px;font-size:26px;letter-spacing:-.04em}h3{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}p{margin:0}
     .hero-copy{max-width:76ch;color:var(--muted);line-height:1.62;font-size:15px;position:relative;z-index:1}.hero-pills{position:relative;z-index:1;margin-top:22px;display:flex;flex-wrap:wrap;gap:10px}.pill,.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:rgba(21,34,51,.06);color:var(--ink);font-size:12px;line-height:1.2}.chip.good{background:rgba(15,118,110,.14);color:var(--teal-strong)}.chip.warn{background:rgba(180,83,9,.14);color:var(--amber)}.chip.bad{background:rgba(180,35,24,.14);color:var(--coral)}
-    .control-grid{display:grid;gap:14px}label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}input,select,button{border:1px solid var(--line);border-radius:14px;font:inherit}input,select{width:100%;padding:12px 14px;background:var(--panel-strong);color:var(--ink)}button{cursor:pointer;padding:11px 16px;background:var(--panel-strong);color:var(--ink);transition:transform 140ms ease,box-shadow 140ms ease,border-color 140ms ease,background 140ms ease}button:hover{transform:translateY(-1px);box-shadow:0 14px 24px rgba(21,34,51,.1);border-color:var(--line-strong)}button.primary{background:linear-gradient(135deg,var(--teal),var(--teal-strong));color:#fff;border-color:transparent}button.secondary{background:linear-gradient(135deg,var(--navy),#275172);color:#fff;border-color:transparent}button.danger{background:linear-gradient(135deg,#c2410c,#9a3412);color:#fff;border-color:transparent}button.ghost{background:rgba(255,255,255,.7)}button.small{padding:8px 12px;font-size:13px;border-radius:12px}.button-row{display:flex;flex-wrap:wrap;gap:10px}
+    .control-grid{display:grid;gap:14px}label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}input,select,button,textarea{border:1px solid var(--line);border-radius:14px;font:inherit}input,select,textarea{width:100%;padding:12px 14px;background:var(--panel-strong);color:var(--ink)}textarea{min-height:260px;resize:vertical;line-height:1.5}button{cursor:pointer;padding:11px 16px;background:var(--panel-strong);color:var(--ink);transition:transform 140ms ease,box-shadow 140ms ease,border-color 140ms ease,background 140ms ease}button:hover{transform:translateY(-1px);box-shadow:0 14px 24px rgba(21,34,51,.1);border-color:var(--line-strong)}button.primary{background:linear-gradient(135deg,var(--teal),var(--teal-strong));color:#fff;border-color:transparent}button.secondary{background:linear-gradient(135deg,var(--navy),#275172);color:#fff;border-color:transparent}button.danger{background:linear-gradient(135deg,#c2410c,#9a3412);color:#fff;border-color:transparent}button.ghost{background:rgba(255,255,255,.7)}button.small{padding:8px 12px;font-size:13px;border-radius:12px}.button-row{display:flex;flex-wrap:wrap;gap:10px}
     .workflow-note{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.72);color:var(--muted);font-size:14px;line-height:1.55}.banner{margin:18px 0 0;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.72);min-height:52px;display:flex;align-items:center;color:var(--ink)}.banner.info{border-left:4px solid var(--navy)}.banner.success{border-left:4px solid var(--teal)}.banner.warn{border-left:4px solid var(--amber)}.banner.error{border-left:4px solid var(--coral)}
     .tab-bar{margin-top:18px;padding:10px;display:flex;flex-wrap:wrap;gap:10px;border-radius:22px;background:rgba(255,255,255,.7);border:1px solid var(--line);box-shadow:var(--shadow)}.tab-button{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:600}.tab-button.active{background:rgba(21,34,51,.08);border-color:rgba(21,34,51,.1);color:var(--ink);box-shadow:none;transform:none}.tab-badge{min-width:24px;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:12px}.tab-panel{display:none;margin-top:20px}.tab-panel.active{display:block}
     .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.metric-card{padding:18px;border-radius:var(--radius-lg);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}.metric-card .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}.metric-card .value{font-size:30px;line-height:1;font-weight:700;letter-spacing:-.04em;margin-bottom:8px}.metric-card .sub{color:var(--muted);font-size:13px;line-height:1.45}
@@ -21,7 +21,8 @@
     .chip-row,.doc-links,.action-stack,.inline-controls{display:flex;flex-wrap:wrap;gap:8px}.action-stack{margin-top:12px}.inline-controls{margin-top:8px}.doc-links{margin-top:10px}.doc-link,.text-link,a{color:#0f4c81;text-decoration:none;font-weight:600}.doc-link:hover,.text-link:hover,a:hover{text-decoration:underline}.muted-inline{color:var(--muted);font-size:13px}
     table{width:100%;border-collapse:collapse;font-size:14px;min-width:880px}.table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--line)}th,td{padding:12px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);background:rgba(255,255,255,.78)}th{position:sticky;top:0;z-index:1;background:#f9f7f2;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.cell-title{font-weight:700;margin-bottom:4px}.cell-sub{color:var(--muted);font-size:13px;line-height:1.45}.cell-actions{display:grid;gap:8px;min-width:220px}.inline-select{min-width:140px;padding:9px 12px;font-size:13px}
     .activity-item{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.86)}.activity-item .topline{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}.activity-item .details{color:var(--muted);font-size:14px;line-height:1.55}.check-item{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;padding:14px;border-radius:14px;background:rgba(21,34,51,.05);font-size:14px;line-height:1.55}.check-number{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:rgba(21,34,51,.1);font-weight:700}.empty{padding:26px;border:1px dashed var(--line);border-radius:18px;color:var(--muted);text-align:center;background:rgba(255,255,255,.58)}
-    @media (max-width:1180px){.hero,.layout.two-up{grid-template-columns:1fr}} @media (max-width:760px){.shell{width:min(100vw - 20px,1440px);margin:16px auto 28px}.hero-card,.control-panel,.panel,.small-panel{padding:18px}.button-row{flex-direction:column}button{width:100%}.control-strip{width:100%}}
+    .tailor-grid{display:grid;grid-template-columns:1fr .82fr;gap:18px}.tailor-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.generated-card{padding:18px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.88)}.generated-card pre{white-space:pre-wrap;margin:0;padding:14px;border-radius:14px;background:rgba(21,34,51,.06);font-size:13px;line-height:1.45;color:var(--ink)}.file-grid{display:grid;gap:10px;margin-top:12px}.file-card{padding:12px 14px;border-radius:14px;background:rgba(21,34,51,.05);display:flex;justify-content:space-between;gap:12px;align-items:center}
+    @media (max-width:1180px){.hero,.layout.two-up,.tailor-grid{grid-template-columns:1fr}} @media (max-width:760px){.shell{width:min(100vw - 20px,1440px);margin:16px auto 28px}.hero-card,.control-panel,.panel,.small-panel{padding:18px}.button-row{flex-direction:column}button{width:100%}.control-strip,.tailor-fields{width:100%;grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -65,6 +66,7 @@
       <button class="tab-button" type="button" data-tab="queue">Review Queue <span class="tab-badge" id="queueBadge">0</span></button>
       <button class="tab-button" type="button" data-tab="applications">Applications <span class="tab-badge" id="applicationBadge">0</span></button>
       <button class="tab-button" type="button" data-tab="jobs">Jobs <span class="tab-badge" id="jobsBadge">0</span></button>
+      <button class="tab-button" type="button" data-tab="resume-tailor">Resume Tailor</button>
       <button class="tab-button" type="button" data-tab="activity">Activity <span class="tab-badge" id="activityBadge">0</span></button>
     </nav>
 
@@ -171,6 +173,62 @@
       </section>
     </section>
 
+    <section class="tab-panel" id="tab-resume-tailor">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>JD to LaTeX Resume</h2>
+            <p class="subhead">Paste a JD and generate a tailored LaTeX resume, cover note, referral message, and keyword report using Ravi's curated AI PM / AI Solution Architect / AI Consultant resume context.</p>
+          </div>
+        </div>
+        <div class="tailor-grid">
+          <div class="stack">
+            <div class="tailor-fields">
+              <div>
+                <label for="tailorRoleTitle">Role Title</label>
+                <input id="tailorRoleTitle" type="text" placeholder="e.g. AI Product Manager">
+              </div>
+              <div>
+                <label for="tailorCompany">Company</label>
+                <input id="tailorCompany" type="text" placeholder="e.g. Deloitte">
+              </div>
+              <div>
+                <label for="tailorTrack">Target Track</label>
+                <select id="tailorTrack">
+                  <option value="auto">Auto-detect</option>
+                  <option value="ai_product_manager">AI Product Manager</option>
+                  <option value="ai_solution_architect">AI Solution Architect</option>
+                  <option value="ai_consultant">AI Consultant</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label for="tailorJD">Job Description</label>
+              <textarea id="tailorJD" placeholder="Paste the full JD here. Include responsibilities, requirements, and preferred skills for best tailoring."></textarea>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="generateTailoredResumeButton" type="button">Generate Tailored Resume</button>
+              <button class="ghost" id="clearTailorButton" type="button">Clear</button>
+            </div>
+          </div>
+          <aside class="stack">
+            <section class="small-panel">
+              <h3>What This Generates</h3>
+              <div class="list">
+                <div class="list-item"><strong>Tailored LaTeX</strong><span>Summary, JD alignment, and skills tuned to the pasted JD</span></div>
+                <div class="list-item"><strong>Keyword Report</strong><span>Track selection, matched JD signals, and review guardrails</span></div>
+                <div class="list-item"><strong>Outreach Drafts</strong><span>120-word cover note and 3-line referral message</span></div>
+              </div>
+            </section>
+            <section class="small-panel">
+              <h3>Generated Output</h3>
+              <div id="resumeTailorResult" class="empty">No tailored resume generated yet.</div>
+            </section>
+          </aside>
+        </div>
+      </section>
+    </section>
+
     <section class="tab-panel" id="tab-activity">
       <div class="layout two-up">
         <section class="panel">
@@ -206,6 +264,7 @@
     const applicationStatuses = ["screening","applied","interview","offer","rejected","closed"];
     const state = {
       data: {tracker: defaultTracker, summary: {}, dashboard: {}, source_conversion: {}, review_queue: [], jobs: [], applications: [], followups_due: [], activity: []},
+      resumeTailor: null,
       index: {jobsById: {}, applicationsByJobId: {}},
       ui: {tab: "overview", queueSearch: "", queueDecision: "all", applicationSearch: "", applicationStatus: "all", applicationOwner: "all", applicationSort: "updated_desc", jobSearch: "", jobSource: "all", jobRemote: "all", jobSort: "captured_desc"}
     };
@@ -280,6 +339,50 @@
         setBanner(`Rescore complete: ${data.scored} fit scores refreshed.`,`success`);
       }catch(error){ setBanner(error.message,"error"); }
     }
+
+    async function generateTailoredResume(){
+      const payload={
+        role_title: document.getElementById("tailorRoleTitle").value,
+        company: document.getElementById("tailorCompany").value,
+        target_track: document.getElementById("tailorTrack").value,
+        job_description: document.getElementById("tailorJD").value
+      };
+      if(!payload.job_description.trim()){
+        setBanner("Paste the JD before generating a tailored resume.","warn");
+        return;
+      }
+      try{
+        setBanner("Generating tailored LaTeX resume and outreach drafts...","info");
+        const data = await api("/api/resume-tailor",{method:"POST",body: JSON.stringify(payload)});
+        state.resumeTailor=data;
+        renderResumeTailorResult(data);
+        activateTab("resume-tailor");
+        setBanner(`Generated ${data.track_label} resume pack for ${data.role_title || "the pasted JD"}.`,`success`);
+      }catch(error){ setBanner(error.message,"error"); }
+    }
+
+    function clearTailorForm(){
+      document.getElementById("tailorRoleTitle").value="";
+      document.getElementById("tailorCompany").value="";
+      document.getElementById("tailorTrack").value="auto";
+      document.getElementById("tailorJD").value="";
+      state.resumeTailor=null;
+      document.getElementById("resumeTailorResult").className="empty";
+      document.getElementById("resumeTailorResult").innerHTML="No tailored resume generated yet.";
+    }
+
+    function renderResumeTailorResult(result){
+      const container=document.getElementById("resumeTailorResult");
+      const files=result.files || {};
+      const fileRows=Object.entries(files).map(([key,file]) => {
+        const gcs=file.gcs_uri ? `<span class="muted-inline">${safe(file.gcs_uri)}</span>` : '<span class="muted-inline">Stored in Cloud Run artifact area</span>';
+        return `<div class="file-card"><div><strong>${safe(titleCase(key))}</strong><div>${gcs}</div></div><a class="doc-link" href="${safe(file.url)}" target="_blank" rel="noopener noreferrer">Open</a></div>`;
+      }).join("");
+      const keywords=(result.matched_keywords || []).length ? result.matched_keywords.map(keyword => `<span class="chip">${safe(keyword)}</span>`).join("") : '<span class="muted-inline">No strong keyword matches detected.</span>';
+      container.className="generated-card";
+      container.innerHTML=`<div class="chip-row"><span class="chip good">${safe(result.track_label || "-")}</span><span class="chip">Confidence ${safe(result.confidence ?? "-")}</span><span class="chip">Run ${safe(result.run_id || "-")}</span></div><h3 style="margin-top:14px;">${safe(result.role_title || "Tailored resume")}${result.company ? ` | ${safe(result.company)}` : ""}</h3><pre>${safe(result.summary_preview || "")}</pre><div class="chip-row" style="margin-top:12px;">${keywords}</div><div class="file-grid">${fileRows}</div>`;
+    }
+
     async function approveApplication(applicationId){ await runAction(`/api/applications/${applicationId}/approve?tracker=${encodeURIComponent(tracker())}`,"Approving application..."); }
     async function rejectApplication(applicationId){ if(!window.confirm("Reject this application from the workflow?")){ return; } await runAction(`/api/applications/${applicationId}/reject?tracker=${encodeURIComponent(tracker())}`,"Rejecting application..."); }
     async function generateArtifacts(applicationId){ await runAction(`/api/applications/${applicationId}/generate-artifacts?tracker=${encodeURIComponent(tracker())}`,"Generating resume summary, cover note, and referral message..."); }
@@ -434,6 +537,8 @@
       document.getElementById("rescoreButton").addEventListener("click",rescoreJobs);
       document.getElementById("refreshButton").addEventListener("click",loadOverview);
       document.getElementById("dashboardButton").addEventListener("click",loadDashboardOnly);
+      document.getElementById("generateTailoredResumeButton").addEventListener("click",generateTailoredResume);
+      document.getElementById("clearTailorButton").addEventListener("click",clearTailorForm);
       document.getElementById("tracker").addEventListener("change",loadOverview);
       document.querySelectorAll(".tab-button").forEach(button => { button.addEventListener("click",() => activateTab(button.dataset.tab)); });
       document.getElementById("queueSearch").addEventListener("input",event => { state.ui.queueSearch=event.target.value; renderQueueTab(); });

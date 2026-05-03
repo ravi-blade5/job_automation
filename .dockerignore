@@ -12,4 +12,11 @@ __pycache__/
 .pytest_cache/
 resume/feedback_audio_chunks/
 resume/feedback_transcript/
+resume/feedback_analysis_ravi_resumes_2026-05-02.md
+resume/resume_variant_c_deloitte_product_manager.md
+resume/resume_variant_d_ai_product_manager_aftermarket.md
+resume/resume_variant_e_ai_solution_architect_aftermarket.md
+resume/resume_variant_f_ai_consultant_aftermarket.md
 resume/latex/build/
+resume/latex/tapasya_b_cv*
+resume/latex/*.png
