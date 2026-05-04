@@ -81,6 +81,8 @@ class ResumeTailorTests(unittest.TestCase):
         self.assertTrue((resume_path.parent / "cover_note_120_words.txt").is_file())
         self.assertTrue((resume_path.parent / "referral_message_3_lines.txt").is_file())
         self.assertTrue((resume_path.parent / "keyword_report.txt").is_file())
+        self.assertTrue((resume_path.parent / "tailored_resume.pdf").is_file())
+        self.assertIn("tailored_resume_pdf", result.files)
 
     def test_auto_detects_solution_architect_track(self) -> None:
         result = self.tailor.generate(

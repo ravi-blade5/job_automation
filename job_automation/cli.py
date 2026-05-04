@@ -17,6 +17,7 @@ from .outreach import FirecrawlContactFinder, ManualOutreachLeadBuilder
 from .enrichment.perplexity import CompanyEnricher, PerplexityCompanyEnricher
 from .models import ApplicationStatus
 from .pipeline import JobAutomationPipeline
+from .profile_store import ResumeProfileStore
 from .scoring import FitScorer
 from .sources.apify_source import ApifyJobSource
 from .sources.firecrawl_source import FirecrawlJobSource
@@ -370,11 +371,18 @@ def _build_pipeline(settings: Settings, tracker_backend: str) -> JobAutomationPi
     tracker = _build_tracker(settings, tracker_backend)
     sources = _build_sources(settings)
     sheet_intelligence = _build_sheet_intelligence(settings)
+    resume_profile = ResumeProfileStore(
+        data_dir=settings.data_dir,
+        gcs_bucket=settings.gcs_bucket,
+        gcs_prefix=settings.gcs_artifacts_prefix,
+        gcp_project_id=settings.gcp_project_id,
+    ).load()
     scorer = FitScorer(
         must_apply_threshold=settings.must_apply_threshold,
         good_fit_threshold=settings.good_fit_threshold,
         company_focus_keywords=settings.company_focus_keywords,
         sheet_intelligence=sheet_intelligence,
+        resume_profile_keywords=resume_profile.keywords if resume_profile else [],
     )
     artifact_generator = ApplicationArtifactGenerator(
         artifacts_root=settings.artifacts_dir,

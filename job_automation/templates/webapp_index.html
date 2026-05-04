@@ -22,6 +22,7 @@
     table{width:100%;border-collapse:collapse;font-size:14px;min-width:880px}.table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--line)}th,td{padding:12px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);background:rgba(255,255,255,.78)}th{position:sticky;top:0;z-index:1;background:#f9f7f2;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.cell-title{font-weight:700;margin-bottom:4px}.cell-sub{color:var(--muted);font-size:13px;line-height:1.45}.cell-actions{display:grid;gap:8px;min-width:220px}.inline-select{min-width:140px;padding:9px 12px;font-size:13px}
     .activity-item{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.86)}.activity-item .topline{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}.activity-item .details{color:var(--muted);font-size:14px;line-height:1.55}.check-item{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;padding:14px;border-radius:14px;background:rgba(21,34,51,.05);font-size:14px;line-height:1.55}.check-number{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:rgba(21,34,51,.1);font-weight:700}.empty{padding:26px;border:1px dashed var(--line);border-radius:18px;color:var(--muted);text-align:center;background:rgba(255,255,255,.58)}
     .tailor-grid{display:grid;grid-template-columns:1fr .82fr;gap:18px}.tailor-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.generated-card{padding:18px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.88)}.generated-card pre{white-space:pre-wrap;margin:0;padding:14px;border-radius:14px;background:rgba(21,34,51,.06);font-size:13px;line-height:1.45;color:var(--ink)}.file-grid{display:grid;gap:10px;margin-top:12px}.file-card{padding:12px 14px;border-radius:14px;background:rgba(21,34,51,.05);display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .profile-upload{padding:14px;border-radius:18px;background:rgba(255,255,255,.74);border:1px solid var(--line)}.profile-upload input[type=file]{padding:9px;background:#fff}.profile-status{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.45}
     @media (max-width:1180px){.hero,.layout.two-up,.tailor-grid{grid-template-columns:1fr}} @media (max-width:760px){.shell{width:min(100vw - 20px,1440px);margin:16px auto 28px}.hero-card,.control-panel,.panel,.small-panel{padding:18px}.button-row{flex-direction:column}button{width:100%}.control-strip,.tailor-fields{width:100%;grid-template-columns:1fr}}
   </style>
 </head>
@@ -47,6 +48,14 @@
               <option value="json">Local JSON</option>
               <option value="airtable">Airtable</option>
             </select>
+          </div>
+          <div class="profile-upload">
+            <label for="resumeProfileFile">Resume/Profile Matching</label>
+            <input id="resumeProfileFile" type="file" accept=".pdf,.docx,.txt,.md">
+            <div class="button-row" style="margin-top:10px;">
+              <button class="ghost small" id="uploadResumeProfileButton" type="button">Upload resume</button>
+            </div>
+            <div id="resumeProfileStatus" class="profile-status">No uploaded resume profile loaded yet.</div>
           </div>
           <div class="button-row">
             <button class="primary" id="runDailyButton" type="button">Run Daily</button>
@@ -264,6 +273,7 @@
     const applicationStatuses = ["screening","applied","interview","offer","rejected","closed"];
     const state = {
       data: {tracker: defaultTracker, summary: {}, dashboard: {}, source_conversion: {}, review_queue: [], jobs: [], applications: [], followups_due: [], activity: []},
+      profile: {is_active:false, filename:"", keyword_count:0, keywords: []},
       resumeTailor: null,
       index: {jobsById: {}, applicationsByJobId: {}},
       ui: {tab: "overview", queueSearch: "", queueDecision: "all", applicationSearch: "", applicationStatus: "all", applicationOwner: "all", applicationSort: "updated_desc", jobSearch: "", jobSource: "all", jobRemote: "all", jobSort: "captured_desc"}
@@ -304,6 +314,7 @@
         setBanner("Loading tracker state...","info");
         const data = await api(`/api/overview?tracker=${encodeURIComponent(tracker())}`);
         state.data = data;
+        state.profile = data.resume_profile || state.profile;
         rebuildIndexes();
         renderAll();
         setBanner(`Loaded ${data.summary.jobs_total} jobs and ${data.summary.review_queue_total} review items from ${data.tracker}.`,`success`);
@@ -314,7 +325,8 @@
       try{
         setBanner("Refreshing dashboard metrics...","info");
         const data = await api(`/api/dashboard?tracker=${encodeURIComponent(tracker())}`);
-        state.data = {...state.data, tracker: data.tracker, summary: data.summary, dashboard: data.dashboard, source_conversion: data.source_conversion, followups_due: data.followups_due};
+        state.data = {...state.data, tracker: data.tracker, summary: data.summary, dashboard: data.dashboard, intelligence: data.intelligence, resume_profile: data.resume_profile, source_conversion: data.source_conversion, followups_due: data.followups_due};
+        state.profile = data.resume_profile || state.profile;
         rebuildIndexes();
         renderOverviewOnly();
         activateTab("overview");
@@ -327,8 +339,53 @@
         setBanner("Running ingestion, scoring, and queue build...","info");
         const data = await api(`/api/run-daily?tracker=${encodeURIComponent(tracker())}`,{method:"POST",body: JSON.stringify({})});
         await loadOverview();
-        setBanner(`Run complete: ingested ${data.result.ingested}, accepted ${data.result.deduped}, scored ${data.result.scored}, queued ${data.result.queued}.`,`success`);
+        const profileNote=data.result.profile_match_enabled ? " Resume-aware scoring was applied." : "";
+        setBanner(`Run complete: ingested ${data.result.ingested}, accepted ${data.result.deduped}, scored ${data.result.scored}, queued/refreshed ${data.result.queued}.${profileNote}`,`success`);
       }catch(error){ setBanner(error.message,"error"); }
+    }
+
+    async function loadResumeProfile(){
+      try{
+        const data = await api("/api/resume-profile");
+        state.profile=data;
+        renderResumeProfileStatus();
+      }catch(_error){ renderResumeProfileStatus(); }
+    }
+
+    async function uploadResumeProfile(){
+      const input=document.getElementById("resumeProfileFile");
+      const file=input.files && input.files[0] ? input.files[0] : null;
+      if(!file){ setBanner("Choose a resume file first. PDF, DOCX, TXT, and MD are supported.","warn"); return; }
+      if(file.size > 8 * 1024 * 1024){ setBanner("Resume file is too large. Keep it under 8 MB.","warn"); return; }
+      try{
+        setBanner("Uploading resume and extracting matching profile...","info");
+        const contentBase64=await readFileAsBase64(file);
+        const data=await api("/api/resume-profile",{method:"POST",body: JSON.stringify({filename:file.name,content_base64:contentBase64})});
+        state.profile=data;
+        renderResumeProfileStatus();
+        setBanner(`Resume profile uploaded: ${data.filename}. Run Daily will now rescore jobs against this profile.`,`success`);
+      }catch(error){ setBanner(error.message,"error"); }
+    }
+
+    function readFileAsBase64(file){
+      return new Promise((resolve,reject) => {
+        const reader=new FileReader();
+        reader.onload=() => resolve(String(reader.result || "").split(",",2)[1] || "");
+        reader.onerror=() => reject(new Error("Could not read the selected file."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderResumeProfileStatus(){
+      const profile=state.profile || {};
+      const container=document.getElementById("resumeProfileStatus");
+      if(!container){ return; }
+      if(!profile.is_active){
+        container.innerHTML="No resume profile active. Upload a resume, then click <strong>Run Daily</strong> for resume-aware matching.";
+        return;
+      }
+      const keywords=(profile.keywords || []).slice(0,8).join(", ");
+      container.innerHTML=`<strong>${safe(profile.filename || "Resume profile")}</strong><br>${safe(profile.keyword_count || 0)} keywords active${keywords ? `: ${safe(keywords)}` : ""}`;
     }
 
     async function rescoreJobs(){
@@ -400,7 +457,7 @@
     }
 
     function renderAll(){ renderOverviewOnly(); renderQueueTab(); renderApplicationsTab(); renderJobsTab(); renderActivityTab(); updateTabBadges(); renderHeroPills(); }
-    function renderOverviewOnly(){ renderMetrics(); renderSourceConversion(); renderFollowups(); renderTrackerHealth(); updateTabBadges(); renderHeroPills(); }
+    function renderOverviewOnly(){ renderMetrics(); renderSourceConversion(); renderFollowups(); renderTrackerHealth(); renderResumeProfileStatus(); updateTabBadges(); renderHeroPills(); }
     function updateTabBadges(){ document.getElementById("queueBadge").textContent=String((state.data.review_queue || []).length); document.getElementById("applicationBadge").textContent=String((state.data.applications || []).length); document.getElementById("jobsBadge").textContent=String((state.data.jobs || []).length); document.getElementById("activityBadge").textContent=String((state.data.activity || []).length); }
     function renderHeroPills(){ const summary=state.data.summary || {}; document.getElementById("heroTrackerPill").textContent=`Tracker: ${state.data.tracker || tracker()}`; document.getElementById("heroJobsPill").textContent=`Jobs tracked: ${summary.jobs_total ?? 0}`; document.getElementById("heroQueuePill").textContent=`Review queue: ${summary.review_queue_total ?? 0}`; }
 
@@ -518,8 +575,10 @@
 
     function renderTrackerHealth(){
       const container=document.getElementById("trackerHealth"); const dashboard=state.data.dashboard || {}; const intelligence=state.data.intelligence || {}; const latestActivity=(state.data.activity || [])[0] || null;
+      const profile=state.profile || state.data.resume_profile || {};
       const intelligenceValue=intelligence.sheet_intelligence_enabled ? `${intelligence.keyword_count || 0} keywords | ${intelligence.benchmark_jd_count || 0} benchmark JDs` : "Off";
-      const lines=[{label:"Tracker",value:state.data.tracker || tracker()},{label:"Sheet intelligence",value:intelligenceValue},{label:"Unique sources",value:dashboard.source_count ?? 0},{label:"Offer rate",value:`${dashboard.offer_rate_pct ?? 0}%`},{label:"Median response",value:`${dashboard.median_response_days ?? 0} days`}];
+      const profileValue=profile.is_active ? `${profile.filename || "uploaded resume"} | ${profile.keyword_count || 0} keywords` : "Not uploaded";
+      const lines=[{label:"Tracker",value:state.data.tracker || tracker()},{label:"Resume profile",value:profileValue},{label:"Sheet intelligence",value:intelligenceValue},{label:"Unique sources",value:dashboard.source_count ?? 0},{label:"Offer rate",value:`${dashboard.offer_rate_pct ?? 0}%`},{label:"Median response",value:`${dashboard.median_response_days ?? 0} days`}];
       if(latestActivity){ lines.push({label:"Latest event",value:`${titleCase(latestActivity.event || "-")} | ${formatDate(latestActivity.event_at || "")}`}); }
       container.innerHTML=lines.map(item => `<div class="list-item"><strong>${safe(item.label)}</strong><span>${safe(item.value)}</span></div>`).join("");
     }
@@ -537,6 +596,7 @@
       document.getElementById("rescoreButton").addEventListener("click",rescoreJobs);
       document.getElementById("refreshButton").addEventListener("click",loadOverview);
       document.getElementById("dashboardButton").addEventListener("click",loadDashboardOnly);
+      document.getElementById("uploadResumeProfileButton").addEventListener("click",uploadResumeProfile);
       document.getElementById("generateTailoredResumeButton").addEventListener("click",generateTailoredResume);
       document.getElementById("clearTailorButton").addEventListener("click",clearTailorForm);
       document.getElementById("tracker").addEventListener("change",loadOverview);
@@ -557,6 +617,7 @@
       document.getElementById("tracker").value=defaultTracker;
       bindStaticControls();
       activateTab(state.ui.tab);
+      loadResumeProfile();
       loadOverview();
     });
   </script>

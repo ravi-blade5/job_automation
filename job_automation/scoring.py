@@ -148,6 +148,7 @@ class FitScorer:
         company_focus_keywords: Sequence[str] | None = None,
         company_focus_bonus: int = 12,
         sheet_intelligence: SheetIntelligence | None = None,
+        resume_profile_keywords: Sequence[str] | None = None,
     ):
         self.must_apply_threshold = must_apply_threshold
         self.good_fit_threshold = good_fit_threshold
@@ -156,6 +157,11 @@ class FitScorer:
         ]
         self.company_focus_bonus = company_focus_bonus
         self.sheet_intelligence = sheet_intelligence
+        self.resume_profile_keywords = [
+            item.strip().lower()
+            for item in (resume_profile_keywords or [])
+            if item.strip()
+        ][:80]
 
     def score(self, job: JobIngestRecord, role_track: RoleTrack) -> FitScoreRecord:
         profile = AI_PM_PROFILE if role_track == RoleTrack.AI_PM else GENAI_LEAD_PROFILE
@@ -203,6 +209,9 @@ class FitScorer:
                 round(sheet_match.keyword_match_pct * 0.10)
                 + round(sheet_match.benchmark_match_pct * 0.05),
             )
+        resume_match = _match_pct(corpus, self.resume_profile_keywords)
+        resume_matched_terms = _matched_terms(corpus, self.resume_profile_keywords, limit=6)
+        resume_score = min(18, round(resume_match * 0.18))
 
         fit_score = min(
             100,
@@ -214,6 +223,7 @@ class FitScorer:
                 + (0.10 * seniority_score)
                 + company_focus_score
                 + sheet_score
+                + resume_score
             ),
         )
         decision = _decision_for(
@@ -231,6 +241,8 @@ class FitScorer:
             decision,
             company_focus_hit,
             sheet_match,
+            resume_match,
+            resume_matched_terms,
         )
 
         return FitScoreRecord(
@@ -251,6 +263,18 @@ def _match_pct(corpus: str, keywords: Iterable[str]) -> int:
         return 0
     hit = sum(1 for keyword in normalized if keyword in corpus)
     return round((hit / len(normalized)) * 100)
+
+
+def _matched_terms(corpus: str, keywords: Iterable[str], *, limit: int) -> List[str]:
+    normalized = []
+    seen = set()
+    for item in keywords:
+        keyword = item.strip().lower()
+        if not keyword or keyword in seen:
+            continue
+        seen.add(keyword)
+        normalized.append(keyword)
+    return [keyword for keyword in normalized if keyword in corpus][:limit]
 
 
 def _seniority_match(corpus: str) -> SeniorityMatch:
@@ -340,6 +364,8 @@ def _reason_codes(
     decision: Decision,
     company_focus_hit: bool,
     sheet_match=None,
+    resume_match: int = 0,
+    resume_matched_terms: Sequence[str] | None = None,
 ) -> List[str]:
     reasons: List[str] = []
     if title_match >= 45:
@@ -359,6 +385,10 @@ def _reason_codes(
         reasons.append(f"curated_keyword_match:{keywords}" if keywords else "curated_keyword_match")
     if sheet_match and sheet_match.benchmark_match_pct >= 25:
         reasons.append("benchmark_jd_similarity")
+    if resume_match > 0:
+        reasons.append(f"resume_profile_match:{resume_match}pct")
+    if resume_matched_terms:
+        reasons.append(f"resume_keywords:{'|'.join(resume_matched_terms[:5])}")
     if must_have < 35:
         reasons.append("must_have_gap")
     if decision == Decision.LOW_FIT:

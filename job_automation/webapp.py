@@ -28,6 +28,7 @@ from .models import (
     OwnerAction,
 )
 from .pipeline import JobAutomationPipeline
+from .profile_store import ResumeProfileStore
 from .resume_tailor import ResumeTailor, resolve_resume_tailor_file
 
 ALLOWED_TRACKERS = {"airtable", "google_sheets", "json"}
@@ -89,6 +90,7 @@ def build_overview_payload(
         },
         "dashboard": snapshot["dashboard"],
         "intelligence": _intelligence_summary(pipeline),
+        "resume_profile": _resume_profile_summary(),
         "source_conversion": snapshot["source_conversion"],
         "review_queue": review_queue,
         "jobs": [item.to_dict() for item in jobs],
@@ -163,11 +165,21 @@ def _build_handler(default_tracker: str):
                                 },
                                 "dashboard": snapshot["dashboard"],
                                 "intelligence": _intelligence_summary(pipeline),
+                                "resume_profile": _resume_profile_summary(),
                                 "source_conversion": snapshot["source_conversion"],
                                 "followups_due": [
                                     item.to_dict() for item in snapshot["followups_due"][:20]
                                 ],
                             },
+                        },
+                    )
+                    return
+                if parsed.path == "/api/resume-profile":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        {
+                            "ok": True,
+                            "data": _resume_profile_summary(),
                         },
                     )
                     return
@@ -212,26 +224,48 @@ def _build_handler(default_tracker: str):
             try:
                 if parsed.path == "/api/run-daily":
                     tracker_backend = _tracker_from_query(parsed.query, default_tracker)
+                    profile_summary = _resume_profile_summary()
                     pipeline = _pipeline_for_tracker(
                         tracker_backend,
                         refresh_apify=_env_bool("JOB_AUTOMATION_REFRESH_APIFY_BEFORE_DAILY", False),
+                        refresh_cache=bool(profile_summary.get("is_active")),
                     )
-                    result = pipeline.run_daily()
+                    result = pipeline.run_daily(force_rescore=bool(profile_summary.get("is_active")))
                     self._send_json(
                         HTTPStatus.OK,
                         {
                             "ok": True,
                             "data": {
                                 "tracker": tracker_backend,
+                                "resume_profile": profile_summary,
                                 "result": {
                                     "ingested": result.ingested,
                                     "deduped": result.deduped,
                                     "scored": result.scored,
                                     "queued": result.queued,
+                                    "profile_match_enabled": bool(profile_summary.get("is_active")),
                                 },
                             },
                         },
                     )
+                    return
+
+                if parsed.path == "/api/resume-profile":
+                    settings = load_settings()
+                    payload = self._read_json_body()
+                    profile = ResumeProfileStore(
+                        data_dir=settings.data_dir,
+                        gcs_bucket=settings.gcs_bucket,
+                        gcs_prefix=settings.gcs_artifacts_prefix,
+                        gcp_project_id=settings.gcp_project_id,
+                    ).save(
+                        filename=str(payload.get("filename", "")),
+                        content_base64=str(payload.get("content_base64", "")),
+                        text=str(payload.get("text", "")),
+                    )
+                    with _PIPELINE_CACHE_LOCK:
+                        _PIPELINE_CACHE.clear()
+                    self._send_json(HTTPStatus.OK, {"ok": True, "data": profile.to_dict()})
                     return
 
                 if parsed.path == "/api/rescore":
@@ -453,6 +487,16 @@ def _intelligence_summary(pipeline: JobAutomationPipeline) -> Dict[str, object]:
         "keyword_count": getattr(intelligence, "keyword_count", 0),
         "benchmark_jd_count": getattr(intelligence, "benchmark_count", 0),
     }
+
+
+def _resume_profile_summary() -> Dict[str, object]:
+    settings = load_settings()
+    return ResumeProfileStore(
+        data_dir=settings.data_dir,
+        gcs_bucket=settings.gcs_bucket,
+        gcs_prefix=settings.gcs_artifacts_prefix,
+        gcp_project_id=settings.gcp_project_id,
+    ).summary()
 
 
 def _tracker_from_query(query_string: str, default_tracker: str) -> str:

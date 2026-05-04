@@ -113,6 +113,46 @@ class ScoringTests(unittest.TestCase):
         self.assertGreaterEqual(score.fit_score, 60)
         self.assertIn("strong_title_alignment", score.reason_codes)
 
+    def test_uploaded_resume_profile_boosts_relevant_jobs(self) -> None:
+        job = JobIngestRecord(
+            job_id="job_6",
+            source="mock",
+            title_raw="AI Product Manager",
+            company="ExampleAI",
+            location="India",
+            remote_type="remote",
+            job_url="https://example.com/profile-fit",
+            description_text=(
+                "Own GenAI roadmap, RAG setup, model evaluation, prompt optimization, "
+                "responsible AI governance, partner pilots, Python analytics, and KPI tracking."
+            ),
+            date_posted="2026-05-01",
+            scraped_at="2026-05-01T00:00:00Z",
+        )
+        baseline = FitScorer(must_apply_threshold=80, good_fit_threshold=65)
+        profiled = FitScorer(
+            must_apply_threshold=80,
+            good_fit_threshold=65,
+            resume_profile_keywords=[
+                "genai",
+                "rag",
+                "model evaluation",
+                "prompt optimization",
+                "responsible ai",
+                "partner",
+                "python",
+                "kpi",
+            ],
+        )
+
+        baseline_score = baseline.score(job, RoleTrack.AI_PM)
+        profiled_score = profiled.score(job, RoleTrack.AI_PM)
+
+        self.assertGreater(profiled_score.fit_score, baseline_score.fit_score)
+        self.assertTrue(
+            any(reason.startswith("resume_profile_match:") for reason in profiled_score.reason_codes)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

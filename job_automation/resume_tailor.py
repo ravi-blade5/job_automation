@@ -256,6 +256,7 @@ class ResumeTailor:
         output_dir.mkdir(parents=True, exist_ok=True)
         files = {
             "tailored_resume": output_dir / "tailored_resume.tex",
+            "tailored_resume_pdf": output_dir / "tailored_resume.pdf",
             "cover_note": output_dir / "cover_note_120_words.txt",
             "referral_message": output_dir / "referral_message_3_lines.txt",
             "keyword_report": output_dir / "keyword_report.txt",
@@ -263,6 +264,13 @@ class ResumeTailor:
             "metadata": output_dir / "metadata.json",
         }
         files["tailored_resume"].write_text(tailored_latex, encoding="utf-8")
+        _write_resume_pdf(
+            latex_source=tailored_latex,
+            output_path=files["tailored_resume_pdf"],
+            track_label=track.label,
+            role_title=role_title,
+            company=company,
+        )
         files["cover_note"].write_text(
             _build_cover_note(track, role_title, company, matched_keywords),
             encoding="utf-8",
@@ -635,3 +643,237 @@ def _latex_escape(value: str) -> str:
         "^": r"\textasciicircum{}",
     }
     return "".join(replacements.get(char, char) for char in value)
+
+
+def _write_resume_pdf(
+    *,
+    latex_source: str,
+    output_path: Path,
+    track_label: str,
+    role_title: str,
+    company: str,
+) -> None:
+    try:
+        from reportlab.lib import colors  # type: ignore
+        from reportlab.lib.enums import TA_CENTER  # type: ignore
+        from reportlab.lib.pagesizes import letter  # type: ignore
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet  # type: ignore
+        from reportlab.lib.units import inch  # type: ignore
+        from reportlab.platypus import (  # type: ignore
+            ListFlowable,
+            ListItem,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+        )
+    except Exception as exc:
+        raise RuntimeError("PDF generation requires reportlab. Install dependencies from requirements.txt.") from exc
+
+    parsed = _parse_latex_resume(latex_source)
+    styles = getSampleStyleSheet()
+    name_style = ParagraphStyle(
+        "ResumeName",
+        parent=styles["Title"],
+        alignment=TA_CENTER,
+        fontName="Helvetica-Bold",
+        fontSize=16,
+        leading=18,
+        spaceAfter=2,
+        textColor=colors.black,
+    )
+    contact_style = ParagraphStyle(
+        "Contact",
+        parent=styles["Normal"],
+        alignment=TA_CENTER,
+        fontSize=8.6,
+        leading=10,
+        spaceAfter=8,
+    )
+    section_style = ParagraphStyle(
+        "Section",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=10.5,
+        leading=12,
+        spaceBefore=5,
+        spaceAfter=3,
+        borderWidth=0,
+        borderColor=colors.black,
+        borderPadding=0,
+    )
+    body_style = ParagraphStyle(
+        "Body",
+        parent=styles["Normal"],
+        fontSize=8.6,
+        leading=10.4,
+        spaceAfter=3,
+    )
+    role_style = ParagraphStyle(
+        "Role",
+        parent=body_style,
+        fontName="Helvetica-Bold",
+        spaceBefore=2,
+    )
+    mini_style = ParagraphStyle(
+        "Mini",
+        parent=body_style,
+        fontName="Helvetica-Bold",
+        spaceBefore=2,
+    )
+    bullet_style = ParagraphStyle(
+        "Bullet",
+        parent=body_style,
+        leftIndent=8,
+        firstLineIndent=0,
+        spaceAfter=1.5,
+    )
+
+    story = [
+        Paragraph(_pdf_escape(parsed.get("name") or "Sri Ravi Kumar Birada"), name_style),
+        Paragraph(_pdf_escape(parsed.get("contact") or ""), contact_style),
+    ]
+    target = " | ".join(part for part in (role_title, company, track_label) if part)
+    if target:
+        story.append(Paragraph(_pdf_escape(target), contact_style))
+
+    for block in parsed["blocks"]:
+        kind = block["kind"]
+        text = str(block["text"])
+        if kind == "section":
+            story.append(Paragraph(_pdf_escape(text), section_style))
+        elif kind == "role":
+            story.append(Paragraph(_pdf_escape(text), role_style))
+        elif kind == "mini":
+            story.append(Paragraph(_pdf_escape(text), mini_style))
+        elif kind == "bullet_group":
+            items = [
+                ListItem(Paragraph(_pdf_escape(item), bullet_style), leftIndent=8)
+                for item in block["items"]
+            ]
+            story.append(
+                ListFlowable(
+                    items,
+                    bulletType="bullet",
+                    start="circle",
+                    leftIndent=12,
+                    bulletFontSize=5,
+                )
+            )
+        elif text.strip():
+            story.append(Paragraph(_pdf_escape(text), body_style))
+        story.append(Spacer(1, 1.5))
+
+    document = SimpleDocTemplate(
+        str(output_path),
+        pagesize=letter,
+        rightMargin=0.42 * inch,
+        leftMargin=0.42 * inch,
+        topMargin=0.36 * inch,
+        bottomMargin=0.36 * inch,
+        title=f"{track_label} Resume",
+        author="Sri Ravi Kumar Birada",
+    )
+    document.build(story)
+
+
+def _parse_latex_resume(latex_source: str) -> Dict[str, object]:
+    name_match = re.search(r"\\ResumeName\{([^}]*)\}", latex_source)
+    contact_match = re.search(r"\\ResumeContact\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}", latex_source)
+    parsed: Dict[str, object] = {
+        "name": _latex_to_text(name_match.group(1)) if name_match else "",
+        "contact": " | ".join(_latex_to_text(part) for part in contact_match.groups()) if contact_match else "",
+        "blocks": [],
+    }
+    blocks: List[Dict[str, object]] = parsed["blocks"]  # type: ignore[assignment]
+    bullet_buffer: List[str] = []
+
+    def flush_bullets() -> None:
+        if bullet_buffer:
+            blocks.append({"kind": "bullet_group", "text": "", "items": list(bullet_buffer)})
+            bullet_buffer.clear()
+
+    skip_prefixes = (
+        "\\documentclass",
+        "\\usepackage",
+        "\\begin{document}",
+        "\\end{document}",
+        "\\fontsize",
+        "\\begin{itemize}",
+        "\\end{itemize}",
+        "\\ResumeName",
+        "\\ResumeContact",
+    )
+    for raw_line in latex_source.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("%") or any(line.startswith(prefix) for prefix in skip_prefixes):
+            continue
+        section = re.match(r"\\section\{(.+)\}", line)
+        if section:
+            flush_bullets()
+            blocks.append({"kind": "section", "text": _latex_to_text(section.group(1))})
+            continue
+        role = re.match(r"\\RoleEntry\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}", line)
+        if role:
+            flush_bullets()
+            title, org, dates = (_latex_to_text(part) for part in role.groups())
+            blocks.append({"kind": "role", "text": f"{title} | {org} | {dates}"})
+            continue
+        mini = re.match(r"\\MiniHeading\{(.+)\}", line)
+        if mini:
+            flush_bullets()
+            blocks.append({"kind": "mini", "text": _latex_to_text(mini.group(1))})
+            continue
+        inline = re.match(r"\\InlineSectionText\{(.+)\}", line)
+        if inline:
+            flush_bullets()
+            blocks.append({"kind": "text", "text": _latex_to_text(inline.group(1))})
+            continue
+        skill = re.match(r"\\SkillGroup\{([^}]*)\}\{(.+)\}", line)
+        if skill:
+            flush_bullets()
+            group, values = (_latex_to_text(part) for part in skill.groups())
+            blocks.append({"kind": "text", "text": f"{group}: {values}"})
+            continue
+        if line.startswith("\\item"):
+            bullet_buffer.append(_latex_to_text(line.removeprefix("\\item").strip()))
+            continue
+        flush_bullets()
+        blocks.append({"kind": "text", "text": _latex_to_text(line)})
+    flush_bullets()
+    return parsed
+
+
+def _latex_to_text(value: str) -> str:
+    text = str(value)
+    replacements = {
+        r"\&": "&",
+        r"\%": "%",
+        r"\$": "$",
+        r"\#": "#",
+        r"\_": "_",
+        r"\{": "{",
+        r"\}": "}",
+        r"\textbar": "|",
+        r"\textbackslash{}": "\\",
+        r"\textasciitilde{}": "~",
+        r"\textasciicircum{}": "^",
+    }
+    for latex, plain in replacements.items():
+        text = text.replace(latex, plain)
+    text = re.sub(r"\\href\{[^}]*\}\{([^}]*)\}", r"\1", text)
+    text = re.sub(r"\\[A-Za-z]+\*?(?:\[[^]]*\])?", "", text)
+    text = text.replace("{", "").replace("}", "")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _pdf_escape(value: str) -> str:
+    return html_escape(_latex_to_text(value))
+
+
+def html_escape(value: str) -> str:
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )

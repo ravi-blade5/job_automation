@@ -9,6 +9,7 @@ This module implements a production-ready starter workflow for:
 - Google Sheets / Airtable tracking with JSON fallback
 - Auto-generated application artifacts (resume summary, cover note, referral message)
 - JD-to-LaTeX resume tailoring portal for AI PM, AI Solution Architect, and AI Consultant tracks
+- Resume/profile upload for resume-aware job scoring before `Run Daily`
 - Follow-up reminders and weekly dashboard metrics
 
 ## Quick Start
@@ -59,7 +60,8 @@ The browser app now supports:
 - Searchable review queue, applications, jobs, and activity views
 - Status progression and follow-up completion from the browser
 - Artifact links served directly from the local app for quick review
-- A Resume Tailor tab that accepts a pasted JD and generates a tailored `.tex` resume, 120-word cover note, 3-line referral message, and keyword report
+- A Resume Tailor tab that accepts a pasted JD and generates a tailored `.tex` resume, PDF resume, 120-word cover note, 3-line referral message, and keyword report
+- A resume/profile upload control that accepts PDF, DOCX, TXT, or MD and applies resume-aware scoring when `Run Daily` is clicked
 
 8. Switch to Google Sheets by setting `JOB_AUTOMATION_TRACKER=google_sheets`.
 9. Switch to Airtable by setting `JOB_AUTOMATION_TRACKER=airtable`.
@@ -80,7 +82,8 @@ The browser app now supports:
 - `webapp`: browser UI for run-daily, review queue, artifact generation, and manual-apply status tracking
 
 The Resume Tailor feature uses the curated LaTeX templates in `resume/latex/` and safe positioning context in `resume/`.
-It currently produces LaTeX source and supporting text artifacts; final PDF compilation remains a manual/local step unless a TeX runtime is added to the hosted container.
+It produces LaTeX source, a generated PDF, and supporting text artifacts.
+Resume/profile upload extracts keywords from the uploaded profile and stores the active profile in the configured GCS bucket so hosted runs and scheduled runs can use the same candidate context.
 
 Firecrawl ingestion uses `map + structured scrape` to discover job-detail URLs and derive stable job IDs.
 Tune volume with `FIRECRAWL_MAX_LINKS_PER_DOMAIN` in `.env`.

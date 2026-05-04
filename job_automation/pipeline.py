@@ -19,6 +19,7 @@ from .models import (
     OwnerAction,
     RoleTrack,
     new_application,
+    utc_now_iso,
 )
 from .scoring import FitScorer
 from .sources.base import JobSource
@@ -122,9 +123,9 @@ class JobAutomationPipeline:
             item.strip().lower() for item in (title_exclude_keywords or []) if item.strip()
         ]
 
-    def run_daily(self) -> PipelineResult:
+    def run_daily(self, *, force_rescore: bool = False) -> PipelineResult:
         ingested, deduped = self.ingest_and_dedupe()
-        scored = self.score_all_jobs()
+        scored = self.rescore_all_jobs() if force_rescore else self.score_all_jobs()
         queued = self.build_review_queue()
         return PipelineResult(ingested=ingested, deduped=deduped, scored=scored, queued=queued)
 
@@ -218,9 +219,10 @@ class JobAutomationPipeline:
         return len(pending_fit_scores)
 
     def build_review_queue(self) -> int:
+        applications = self.tracker.list_applications()
         existing_job_ids = {
             app.job_id
-            for app in self.tracker.list_applications()
+            for app in applications
             if app.status != ApplicationStatus.CLOSED
         }
         fits_by_job: Dict[str, List] = defaultdict(list)
@@ -229,6 +231,38 @@ class JobAutomationPipeline:
 
         pending_applications = []
         pending_activities = []
+        for application in applications:
+            if application.status != ApplicationStatus.NEW or application.owner_action != OwnerAction.HOLD:
+                continue
+            fits = fits_by_job.get(application.job_id, [])
+            eligible = [fit for fit in fits if fit.decision != Decision.LOW_FIT]
+            if not eligible:
+                continue
+            best_fit = sorted(eligible, key=lambda item: item.fit_score, reverse=True)[0]
+            if (
+                application.role_track == best_fit.role_track
+                and application.decision == best_fit.decision
+                and application.fit_score == best_fit.fit_score
+            ):
+                continue
+            application.role_track = best_fit.role_track
+            application.decision = best_fit.decision
+            application.fit_score = best_fit.fit_score
+            application.resume_variant = "A" if best_fit.role_track == RoleTrack.AI_PM else "B"
+            application.updated_at = utc_now_iso()
+            pending_applications.append(application)
+            pending_activities.append(
+                ActivityLogRecord.create(
+                    entity_type="application",
+                    entity_id=application.application_id,
+                    event="review_queue_score_refreshed",
+                    details=(
+                        f"job_id={application.job_id}, role_track={best_fit.role_track.value}, "
+                        f"fit={best_fit.fit_score}"
+                    ),
+                )
+            )
+
         for job in self.tracker.list_jobs():
             if job.job_id in existing_job_ids:
                 continue
